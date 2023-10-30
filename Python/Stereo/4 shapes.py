@@ -32,7 +32,7 @@ v_min = 150
 v_max = 255
 
 image_output = 'Orginal'
-options = ['Orginal', 'Terskling', 'Erosjon', 'Dialasjon', 'Konturer1', 'Konturer2']
+options = ['Orginal','Blur', 'Terskling', 'Erosjon', 'Dialasjon', 'Konturer1', 'Konturer2']
 
 takeSnapshot = False
 
@@ -137,6 +137,9 @@ cameraFOV = 60
 
 # CV2 Setup --------------------------------------------------------------------------------------
 
+fps = cap.get(cv2.CAP_PROP_FPS)
+print('FPS: ' + str(fps))
+
 #Function that runs every frame
 def update_image():
     global takeSnapshot
@@ -148,8 +151,11 @@ def update_image():
         print('Could not read image from webcam')
         return
 
+    #blur = cv2.GaussianBlur(frame, (9, 9), 0)
+    blur = cv2.medianBlur(frame, 13)
+
     # convert the image to hsv
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
 
     # the hue axis is a circle. This means certain colors can be tricky to treshhold. Like red.
     # To solve this we can use two tresholds, one for the lower values and one for the higher values
@@ -206,7 +212,12 @@ def update_image():
     if image_output == 'Orginal':
         original = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(original)
-        snaphot = original  
+        snapshot = original
+
+    elif image_output == 'Blur':
+        original = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(original)
+        snapshot = original  
     elif image_output == 'Terskling':
         image = Image.fromarray(mask)
         snapshot = mask
