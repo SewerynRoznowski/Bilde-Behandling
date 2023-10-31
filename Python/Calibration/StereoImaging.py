@@ -28,7 +28,7 @@ while True:
 
     cv2.namedWindow("Left, Combined Images, Right", cv2.WINDOW_NORMAL)
 
-    cv2.imshow("Left, Combined Images, Right, combined_frame)
+    cv2.imshow("Left, Combined Images, Right", combined_frame)
    # cv2.imshow("Live Image1", frame1)
    # cv2.imshow("Live Image2", frame2)
 
