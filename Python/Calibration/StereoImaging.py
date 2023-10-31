@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+
 #cap1 is videocapture(0) and Left, cap2 is videocapture(2) and Right, this may differ from computer and port layout!
 cap1 = cv2.VideoCapture(0)
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 640)

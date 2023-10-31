@@ -3,7 +3,7 @@ import numpy as np
 import glob
 ############### Finne og kjenne igjen hjørnene på sjakkbrettet #####################
 
-chessboardSize = (9,6)
+chessboardSize = (8,5)
 frameSize = (640, 480)
 
 ## Kriterier ##
@@ -12,7 +12,7 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30 , 0.001)
 
 # Forberede objekt pointere, som (0,0,0), (1,0,0) osv...
 objp = np.zeros((chessboardSize[0] * chessboardSize[1], 3), np.float32)
-objp[:, :2] = np.mgrid[0 : chessboardSize[0], 0:[chessboardSize[1]]].T.reshape[-1,2]
+objp[:, :2] = np.mgrid[0 : chessboardSize[0], 0:chessboardSize[1]].T.reshape(-1,2)
 
 objp = objp * 20
 print(objp)
@@ -22,20 +22,25 @@ objpoints = []
 imgpointsL = []
 imgpointsR = []
 
-imagesLeft = glob.glob('images/LeftStereo/*.png')
-imagesRight = glob.glob('images/RightStereo/*.png')
+imagesLeft = sorted(glob.glob('Python/Calibration/images/LeftStereo/*.png'))
+imagesRight = sorted(glob.glob('Python/Calibration/images/RightStereo/*.png'))
+
+print(imagesLeft, imagesRight)
 
 for imgLeft, imgRight, in zip(imagesLeft, imagesRight):
+    print(imgLeft, imgRight)
     imgL = cv2.imread(imgLeft)
     imgR = cv2.imread(imgRight)
-
     grayL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     grayR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
+    #cv2.imshow('Venstre', grayR)
+    #cv2.waitKey(0)
 
     # Nå skal koden finne hjørnene i sjakkmønsteret
-    retL = cornersL = cv2.findChessboardCorners(grayL, chessboardSize, None)
-    retR = cornersR = cv2.findChessboardCorners(grayR, chessboardSize, None)
-
+    retL, cornersL = cv2.findChessboardCorners(grayL, chessboardSize, None)
+    retR, cornersR = cv2.findChessboardCorners(grayR, chessboardSize, None)
+    #cv2.waitKey(0)
+    print(retL, retR)
     if retL and retR == True:
 
         objpoints.append(objp)
@@ -51,7 +56,7 @@ for imgLeft, imgRight, in zip(imagesLeft, imagesRight):
         cv2.drawChessboardCorners(imgL, chessboardSize, cornersL, retL)
         cv2.imshow('Venstre', imgL)
         cv2.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
-        cv2.imshow('Høyre', imgR)
+        cv2.imshow('Hoyre', imgR)
         cv2.waitKey(1000)
 
 cv2.destroyAllWindows
