@@ -4,6 +4,45 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import math
 
+
+def find_cameras(max_cameras_to_check=10):
+    available_cameras = []
+    for i in range(max_cameras_to_check):
+        cap = cv2.VideoCapture(i)
+        if cap is None or not cap.isOpened():
+            cap.release()
+        else:
+            available_cameras.append(i)
+            cap.release()
+    return available_cameras
+
+
+# Function to calculate the lengths of the other two sides
+def calculate_triangle_sides(side_c, angle_a, angle_b):
+    # Convert angles from degrees to radians
+
+    angle_c = 180 - angle_a - angle_b
+
+    angle_a_rad = math.radians(angle_a)
+    angle_b_rad = math.radians(angle_b)
+    angle_c_rad = math.radians(angle_c)
+
+    success = True
+    side_a = 0
+    side_b = 0
+    
+    try: # Sometimes sin of andle_c_rad can give 0, this causes a division by zero error. 
+        side_b = (side_c * math.sin(angle_b_rad)) / math.sin(angle_c_rad)
+    
+        side_a = (side_c * math.sin(angle_a_rad)) / math.sin(angle_c_rad)
+    
+    except ZeroDivisionError:
+        success = False
+
+    return success, side_a, side_b
+
+
+
 # UI ---------------------------------------------------------------------------------------------
 # Define the tkinter window
 root = tk.Tk()
@@ -41,9 +80,18 @@ v_min = 150
 v_max = 255
 
 image_output = 'Orginal'
-options = ['Orginal','Blur', 'Terskling', 'Erosjon', 'Dialasjon', 'Konturer1', 'Konturer2']
+options = ['Orginal', 'Terskling', 'Erosjon', 'Dialasjon', 'Konturer1', 'Konturer2']
 
 takeSnapshot = False
+
+cameraL = 0
+cameraR = 0
+
+# assumed camera field of view, needs to be calibrated
+cameraLFOV = 78
+
+cameraRFOV = 78
+
 
 #define sliders for color tresholds
 def set_h_min(h):
@@ -64,6 +112,64 @@ def set_v_min(v):
 def set_v_max(v):
     global v_max
     v_max = int(v)
+
+def set_cameraLFOV(fov):
+    global cameraLFOV
+    cameraLFOV = float(fov)
+
+def set_cameraRFOV(fov):
+    global cameraRFOV
+    cameraRFOV = float(fov)
+
+
+#define function for input camera 
+def set_cameraL(camera):
+    global cameraL
+    global capL 
+    global cameraWidthL
+    global cameraHeightL
+
+    cameraL = int(camera)
+
+    try: 
+        capL.release()
+    except:
+        pass
+
+    capL = cv2.VideoCapture(cameraL)
+
+    # set the camera resolution, if resolution is invalid it will choose the closest one
+    capL.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capL.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    # get the camera resolution, this is used to calculate the distance from the center of the image
+    cameraWidthL = capL.get(cv2.CAP_PROP_FRAME_WIDTH)
+    cameraHeightL = capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+
+
+def set_cameraR(camera):
+    global cameraR
+    global capR
+    global cameraWidthR
+    global cameraHeightR
+
+    cameraR = int(camera)
+
+    try: 
+        capR.release()
+    except:
+        pass
+
+    capR = cv2.VideoCapture(cameraR)
+
+    capR.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    cameraWidthR = capR.get(cv2.CAP_PROP_FRAME_WIDTH)
+    cameraHeightR = capR.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+
 
 # define function for dropdown menu
 def set_output(output):
@@ -125,32 +231,66 @@ outputMenu.grid(row=6, column=1)
 snapshotButton = tk.Button(rightFrame, text='Snapshot', command=snapshot)
 snapshotButton.grid(row=7, column=0)
 
+# add dropdown menu for selecting input camera 
+cameras = find_cameras()
+cameraL = tk.StringVar(rightFrame)
+cameraL.set(cameras[0])
 
+cameraLabel = tk.Label(rightFrame, text='Camera Left:')
+cameraLabel.grid(row=8, column=0)
+cameraMenu = tk.OptionMenu(rightFrame, cameraL, *cameras, command=set_cameraL)
+cameraMenu.grid(row=8, column=1)
+
+cameraR = tk.StringVar(rightFrame)
+cameraR.set(cameras[0])
+
+cameraLabel = tk.Label(rightFrame, text='Camera Right:')
+cameraLabel.grid(row=9, column=0)
+cameraMenu = tk.OptionMenu(rightFrame, cameraR, *cameras, command=set_cameraR)
+cameraMenu.grid(row=9, column=1)
+
+# add an input field for FOV 
+fovL = tk.StringVar(rightFrame)
+fovL.set(cameraLFOV)
+
+fovLLabel = tk.Label(rightFrame, text='FOV Left:')
+fovLLabel.grid(row=10, column=0)
+fovLEntry = tk.Entry(rightFrame, textvariable=fovL)
+fovLEntry.grid(row=10, column=1)
+
+# add an input field for FOV
+fovR = tk.StringVar(rightFrame)
+fovR.set(cameraRFOV)
+
+fovRLabel = tk.Label(rightFrame, text='FOV Right:')
+fovRLabel.grid(row=11, column=0)
+fovREntry = tk.Entry(rightFrame, textvariable=fovR)
+fovREntry.grid(row=11, column=1)
 
 
 # UI ---------------------------------------------------------------------------------------------
 
 # CV2 Setup --------------------------------------------------------------------------------------
-cap = cv2.VideoCapture(0)
-cap1= cv2.VideoCapture(1)
+
+set_cameraL(0)
+set_cameraR(0)
+
+capL = cv2.VideoCapture(int(cameraL))
+capR = cv2.VideoCapture(int(cameraR))
 
 # set the camera resolution, if resolution is invalid it will choose the closest one
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+capL.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+capL.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+capR.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 # get the camera resolution, this is used to calculate the distance from the center of the image
-cameraWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-cameraHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+cameraWidthL = capL.get(cv2.CAP_PROP_FRAME_WIDTH)
+cameraHeightL = capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-cameraWidth1 = cap1.get(cv2.CAP_PROP_FRAME_WIDTH)
-cameraHeight1 = cap1.get(cv2.CAP_PROP_FRAME_HEIGHT)
-
-# assumed camera field of view, needs to be calibrated
-cameraFOV = 60
-cameraFOV1 = 60
+cameraWidthR = capR.get(cv2.CAP_PROP_FRAME_WIDTH)
+cameraHeightR = capR.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
 # CV2 Setup --------------------------------------------------------------------------------------
 
@@ -159,8 +299,8 @@ def update_image():
     global takeSnapshot
 
     # read the image from the webcam
-    ret , frame = cap.read()
-    ret1 , frame1 = cap1.read()
+    ret , frame = capL.read(0)
+    ret1 , frame1 = capR.read(0)
 
     if not ret or not ret1:
         print('Could not read image from webcam')
@@ -208,76 +348,80 @@ def update_image():
     filtered_contours = []
     filtered_contours1 = []
 
-    corners = []
-    corners1 = []
-
     # Approximate the contour shape and filter out small contours
     if len(contours) > 0:
         for x in contours:
-            epsilon = 0.02*cv2.arcLength(x, True) 
-            approx = cv2.approxPolyDP(x, epsilon, True)
-
-            sides = len(approx)
 
             # only keep contours with 4 sides and an area larger than 1000 pixels
-            if sides == 4 and cv2.contourArea(x) > 20:
+            if cv2.contourArea(x) > 100:
 
                 filtered_contours.append(x)
-                corners.append(approx)
 
     if len(contours1) > 0:
         for x in contours1:
-            epsilon = 0.02*cv2.arcLength(x, True) 
-            approx = cv2.approxPolyDP(x, epsilon, True)
 
-            sides = len(approx)
-
-            # only keep contours with 4 sides and an area larger than 1000 pixels
-            if sides == 4 and cv2.contourArea(x) > 20:
+            if cv2.contourArea(x) > 100:
 
                 filtered_contours1.append(x)
-                corners1.append(approx)
+
+    # contour matching
+
+    matchedContours = []
+    matchFilter = 0.2
+
+    if (len (filtered_contours) > 0 and len (filtered_contours1) > 0):
+        for idx, x in enumerate(filtered_contours):
+            bestMatch = []
+
+            for idy, y in enumerate(filtered_contours1):
+                matchChance = cv2.matchShapes(x, y, 1, 0.0)
+
+                if matchChance < matchFilter:
+                    bestMatch.append([idx,idy, matchChance])
+
+            if len(bestMatch) > 0:
+            
+                bestMatch = min(bestMatch, key=lambda x: x[2])
+
+                matchedContours.append(bestMatch)
+
+    for x in matchedContours:
+        cv2.drawContours(frame, [filtered_contours[x[0]]], 0, (0, 255, 0), 3)
+        cv2.drawContours(frame1, [filtered_contours1[x[1]]], 0, (0, 255, 0), 3)
 
 
-    for x in corners:
-        for y in x:
-            cv2.circle(frame, (y[0][0], y[0][1]), 5, (0, 0, 255), -1)
 
-    for x in corners1: 
-        for y in x:
-            cv2.circle(frame1, (y[0][0], y[0][1]), 5, (0, 0, 255), -1)
+        M = cv2.moments(filtered_contours[x[0]])
+        if M['m00'] > 0:
+            cx0 = int(M['m10']/M['m00'])
+            cy0 = int(M['m01']/M['m00'])
 
-    # Go through filitered contours and draw them on the image
-    # for x in filtered_contours:
-    #     cv2.drawContours(mask, [x], 0, 255, -1)
-    #     M = cv2.moments(x)
-    #     if M['m00'] > 0:
-    #         cx = int(M['m10']/M['m00'])
-    #         cy = int(M['m01']/M['m00'])
-    #         cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+            angleX0 = (math.degrees(math.atan((cx0 - cameraWidthL/2)/(cameraWidthL/2) * math.tan(math.radians(cameraLFOV/2))))*-1) + 90 
+            angleY0 = math.degrees(math.atan((cy0 - cameraHeightL/2)/(cameraHeightL/2) * math.tan(math.radians(cameraLFOV/2))))
 
-    #         # convert cx and cy to degrees from center 
-    #         angleX = math.degrees(math.atan((cx - cameraWidth/2)/(cameraWidth/2) * math.tan(math.radians(cameraFOV/2))))
-    #         angleY = math.degrees(math.atan((cy - cameraHeight/2)/(cameraHeight/2) * math.tan(math.radians(cameraFOV/2))))
+            cv2.circle(frame, (cx0, cy0), 5, (0, 0, 255), -1)
 
-    #         cv2.putText(frame, str(angleX), (cx - 20, cy - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-    #         cv2.putText(frame, str(angleY), (cx - 20, cy - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-    # for x in filtered_contours1:
-    #     cv2.drawContours(mask1, [x], 0, 255, -1)
-    #     M = cv2.moments(x)
-    #     if M['m00'] > 0:
-    #         cy = int(M['m10']/M['m00'])
-    #         cx = int(M['m01']/M['m00'])
-    #         cv2.circle(frame1, (cy, cx), 5, (0, 0, 255), -1)
+        M = cv2.moments(filtered_contours1[x[1]])
+        if M['m00'] > 0:
+            cx1 = int(M['m10']/M['m00'])
+            cy1 = int(M['m01']/M['m00'])
 
-    #         # convert cx and cy to degrees from center
-    #         angleX = math.degrees(math.atan((cy - cameraWidth1/2)/(cameraWidth1/2) * math.tan(math.radians(cameraFOV1/2))))
-    #         angleY = math.degrees(math.atan((cx - cameraHeight1/2)/(cameraHeight1/2) * math.tan(math.radians(cameraFOV1/2))))
+            angleX1 = math.degrees(math.atan((cx1 - cameraWidthR/2)/(cameraWidthR/2) * math.tan(math.radians(cameraRFOV/2)))) + 90
+            angleY1 = math.degrees(math.atan((cy1 - cameraHeightR/2)/(cameraHeightR/2) * math.tan(math.radians(cameraRFOV/2))))
 
-    #         cv2.putText(frame1, str(angleX), (cy - 20, cx - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-    #         cv2.putText(frame1, str(angleY), (cy - 20, cx - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.circle(frame1, (cx1, cy1), 5, (0, 0, 255), -1)
 
+
+        
+        if angleX0 and angleX1: 
+            ret, distance1 , distance2 = calculate_triangle_sides(0.18, angleX0, angleX1)
+
+            if ret == True:
+                cv2.putText(frame, str(distance2), (cx0 - 20, cy0 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(frame1, str(distance1), (cx1 - 20, cy1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+   
 
 
     # Image preview. ---------------------------------------------------------------------------------------------
@@ -297,14 +441,14 @@ def update_image():
         snaphot1 = original1
 
 
-    elif image_output == 'Blur':
-        original = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(original)
-        snapshot = original
+    # elif image_output == 'Blur':
+    #     original = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
+    #     image = Image.fromarray(original)
+    #     snapshot = original
 
-        original1 = cv2.cvtColor(blur1, cv2.COLOR_BGR2RGB)
-        image1 = Image.fromarray(original1)
-        snapshot1 = original1   
+    #     original1 = cv2.cvtColor(blur1, cv2.COLOR_BGR2RGB)
+    #     image1 = Image.fromarray(original1)
+    #     snapshot1 = original1   
 
 
     elif image_output == 'Terskling':
@@ -330,8 +474,8 @@ def update_image():
 
     elif image_output == 'Konturer1':
         #create a blank image of same size as camera image
-        blank = np.zeros((int(cameraHeight), int(cameraWidth),3), np.uint8)
-        blank1 = np.zeros((int(cameraHeight1), int(cameraWidth1),3), np.uint8)
+        blank = np.zeros((int(cameraHeightL), int(cameraWidthL),3), np.uint8)
+        blank1 = np.zeros((int(cameraHeightR), int(cameraWidthR),3), np.uint8)
 
         #draw contours on blank image
         for x in contours:
@@ -347,8 +491,8 @@ def update_image():
         snapshot1 = blank1
     elif image_output == 'Konturer2':
         #create a blank image of same size as camera image
-        blank = np.zeros((int(cameraHeight), int(cameraWidth),3), np.uint8)
-        blank1 = np.zeros((int(cameraHeight1), int(cameraWidth1),3), np.uint8)
+        blank = np.zeros((int(cameraHeightL), int(cameraWidthL),3), np.uint8)
+        blank1 = np.zeros((int(cameraHeightR), int(cameraWidthR),3), np.uint8)
         #draw contours on blank image
         for x in filtered_contours:
             cv2.drawContours(blank, [x], 0, (0, 255, 0), 3)
@@ -415,6 +559,7 @@ update_image()
 
 root.mainloop()
 
-cap.release()
+capL.release()
+capR.release()
 
 

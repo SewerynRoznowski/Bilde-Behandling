@@ -135,7 +135,7 @@ cameraHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 # assumed camera field of view, needs to be calibrated
 cameraFOV = 60
 
-# CV2 Setup --------------------------------------------------------------------------------------
+# CV2 Setup --------------------------------------------------------------------------------------  
 
 fps = cap.get(cv2.CAP_PROP_FPS)
 print('FPS: ' + str(fps))
