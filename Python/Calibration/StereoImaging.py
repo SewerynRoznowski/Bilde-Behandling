@@ -1,5 +1,7 @@
 import cv2
-#cap1 is videocapture(0), cap2 is videocapture(2), this may differ from computer and port layout!
+import numpy as np
+
+#cap1 is videocapture(0) and Left, cap2 is videocapture(2) and Right, this may differ from computer and port layout!
 cap1 = cv2.VideoCapture(0)
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -15,9 +17,9 @@ if not cap1.isOpened() or not cap2.isOpened():
 
     exit()
 while True:
-# Caputre frame from camera 1Left
+# Caputre frame from camera 1 Left
     ret1, frame1 = cap1.read()
-# Capture frame from camera 2Right
+# Capture frame from camera 2 Right
     ret2, frame2 = cap2.read()
 
     if not ret1 or not ret2:
