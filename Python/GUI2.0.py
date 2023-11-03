@@ -13,16 +13,32 @@ class GUI():
 
         # Initialize the cameras
         self.capL = cv2.VideoCapture(0)
+        if not self.capL.isOpened():
+            print("Error: Left Camera not opened")
+        else:
+            print("Left Camera opened successfully")
         self.capL.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.capL.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cameraWidthL = self.capL.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightL = self.capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
         self.capR = cv2.VideoCapture(2)
+        if not self.capL.isOpened():
+            print("Error: Right Camera not opened")
+        else:
+            print("Right Camera opened successfully")
         self.capR.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cameraWidthR = self.capR.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightR = self.capR.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        retL, frameL = self.capL.read()
+        retR, frameR = self.capR.read()
+
+        if retL and retR:
+            print("Frames captured successfully from both cameras")
+        else:
+            print("Failed to capture frames from one or both cameras.")
 
 #        self.find_cameras()  # Call the find_cameras method to check available cameras
         
@@ -103,16 +119,16 @@ class GUI():
         self.botImgR.grid(row=1, column=0)
 
     def updateCameraFrames(self, frameL, frameR):
-        retL, frameL = self.capL.read()
-        retR, frameR = self.capR.read()
+        # retL, frameL = self.capL.read()
+        # retR, frameR = self.capR.read()
         if frameL is not None and frameR is not None:
             frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
             frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
 
-            imageSourceL = Image.fromarray(frameL)
-            imageL = ImageTk.PhotoImage(imageSourceL)
-            imageSourceR = Image.fromarray(frameR)
-            imageR = ImageTk.PhotoImage(imageSourceR)
+            self.imageSourceL = Image.fromarray(frameL)
+            imageL = ImageTk.PhotoImage(self.imageSourceL)
+            self.imageSourceR = Image.fromarray(frameR)
+            imageR = ImageTk.PhotoImage(self.imageSourceR)
 
             self.topImgL.configure(image=imageL)
             self.topImgL.image = imageL
@@ -121,21 +137,21 @@ class GUI():
 
         self.window.after(50, self.update)
     def update(self):
-        #self.myColorconverter = Colorconverter()
-        while True:
-            retL, frameL = self.capL.read()
-            retR, frameR = self.capR.read()
+        frameL = self.capL.read()[1]
+        frameR = self.capR.read()[1]
+        
+        # Pass frameL and frameR to Colorconverter when creating an instance
+        self.myColorconverter = Colorconverter(frameL, frameR) 
 
-            if retL and retR:
-                self.updateCameraFrames(frameL, frameR)  # Update and display camera frames
-            else:
-                print("Failed to capture frames from one or both cameras.")
+        self.updateCameraFrames(frameL, frameR)
+
+
 
 
     def snapShot(self):
         try:
-            retL, frameL = capL.read()
-            retR, frameR = capR.read()
+            retL, frameL = self.capL.read()
+            retR, frameR = self.capR.read()
             test = cv2.imwrite('Python/Calibration/images/LeftStereo/ImageL' + str(self.bildenr) + '.png', frameL)
             test1 = cv2.imwrite('Python/Calibration/images/RightStereo/ImageR' + str(self.bildenr) + '.png', frameR)
             if test == True and test1 == True:
