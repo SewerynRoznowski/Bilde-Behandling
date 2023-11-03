@@ -132,7 +132,7 @@ snapshotButton.grid(row=7, column=0)
 
 # CV2 Setup --------------------------------------------------------------------------------------
 cap = cv2.VideoCapture(0)
-cap1= cv2.VideoCapture(1)
+cap1= cv2.VideoCapture(2)
 
 # set the camera resolution, if resolution is invalid it will choose the closest one
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)

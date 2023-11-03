@@ -14,6 +14,7 @@ def find_cameras(max_cameras_to_check=10):
         else:
             available_cameras.append(i)
             cap.release()
+    print(available_cameras)
     return available_cameras
 
 
@@ -85,7 +86,7 @@ options = ['Orginal', 'Terskling', 'Erosjon', 'Dialasjon', 'Konturer1', 'Konture
 takeSnapshot = False
 
 cameraL = 0
-cameraR = 0
+cameraR = 2
 
 # assumed camera field of view, needs to be calibrated
 cameraLFOV = 78
@@ -272,11 +273,11 @@ fovREntry.grid(row=11, column=1)
 
 # CV2 Setup --------------------------------------------------------------------------------------
 
-set_cameraL(0)
-set_cameraR(0)
+#set_cameraL(0)
+#set_cameraR(2)
 
-capL = cv2.VideoCapture(int(cameraL))
-capR = cv2.VideoCapture(int(cameraR))
+capL = cv2.VideoCapture(int(0))
+capR = cv2.VideoCapture(int(2))
 
 # set the camera resolution, if resolution is invalid it will choose the closest one
 capL.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -299,8 +300,8 @@ def update_image():
     global takeSnapshot
 
     # read the image from the webcam
-    ret , frame = capL.read(0)
-    ret1 , frame1 = capR.read(0)
+    ret , frame = capL.read()
+    ret1 , frame1 = capR.read()
 
     if not ret or not ret1:
         print('Could not read image from webcam')

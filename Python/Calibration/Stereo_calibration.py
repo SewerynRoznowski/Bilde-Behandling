@@ -57,7 +57,7 @@ for imgLeft, imgRight, in zip(imagesLeft, imagesRight):
         cv2.imshow('Venstre', imgL)
         cv2.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
         cv2.imshow('Hoyre', imgR)
-        cv2.waitKey(1000)
+        cv2.waitKey(2000)
 
 cv2.destroyAllWindows
 
