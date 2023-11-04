@@ -65,3 +65,31 @@ if __name__ == "__main__":
     style = Style(theme='superhero')
     app = CameraViewer(root)
     root.mainloop()
+
+                cv2.drawChessboardCorners(imgL, chessboardSize, cornersL, retL)
+                self.save_traceL = cv2.imwrite('Python/Calibration/images/LeftTrace/TraceL' + str(self.bildenr1) + '.png', imgL)
+                cv2.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
+                self.save_traceR = cv2.imwrite('Python/Calibration/images/RightTrace/TraceR' + str(self.bildenr1) + '.png', imgR)
+                self.bildenr1 += 1 # Increment bildenr1 with +1
+                cv2.waitKey(10)
+    
+            if frameL is not None and frameR is not None:
+            frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
+            frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
+
+            self.imageSourceL = Image.fromarray(frameL)
+            imageL = ImageTk.PhotoImage(self.imageSourceL)
+            self.imageSourceR = Image.fromarray(frameR)
+            imageR = ImageTk.PhotoImage(self.imageSourceR)
+            # print(frameL.min(), frameL.max())
+            # print(frameR.min(), frameR.max())
+
+            self.topImgL.configure(image=imageL)
+            self.topImgL.image = imageL
+            self.topImgR.configure(image=imageR)
+            self.topImgR.image = imageR
+
+            self.botImgL.configure(image=imageL)
+            self.botImgL.image = imageL
+            self.botImgR.configure(image=imageR)
+            self.botImgR.image = imageR

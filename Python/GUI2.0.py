@@ -21,6 +21,10 @@ class GUI():
         self.stereoMapR_y = kalib_data.getNode('stereoMapR_y').mat()
 
         kalib_data.release()
+        # print(self.stereoMapL_x.shape)
+        # print(self.stereoMapL_y.shape)
+        # print(self.stereoMapR_x.shape)
+        # print(self.stereoMapR_y.shape)
 
         # Initialize the cameras
         self.capL = cv2.VideoCapture(0)
@@ -66,14 +70,16 @@ class GUI():
         self.topImgL.grid(row=0, column=0)
         self.botImgL = tb.Label(self.leftFrame)
         self.botImgL.grid(row=1, column=0)
+
+
         #Center frame of program
         self.centerFrame = tb.Frame(self.window, width = 100, height= 100)
         self.centerFrame.grid(row=0, column=1, padx=5, pady=5)
 
+        #Calibration checkbox
         self.calibEnabled = IntVar(value=0)
-        self.calibCheckbox = tb.Checkbutton(self.centerFrame, text="Use Calibration", variable=self.calibEnabled, bootstyle="success")
+        self.calibCheckbox = tb.Checkbutton(self.centerFrame, text="Calibration", variable=self.calibEnabled, bootstyle="success")
         self.calibCheckbox.grid(row=0, column=1, columnspan=2, padx=2, pady=2)
-
 
         # Stereokalibrering av høyre og venstre kamera
         self.calButton =tb.Button(self.centerFrame, text="Start Kalibrering", command=self.stereo_calibration, bootstyle="warning")
@@ -193,14 +199,14 @@ class GUI():
                 # Tegn og vis alle hjørner
 
                 cv2.drawChessboardCorners(imgL, chessboardSize, cornersL, retL)
-                self.save_traceL = cv2.imwrite('Python/Calibration/images/LeftTrace/ImageL' + str(self.bildenr1) + '.png', imgL)
+                self.save_traceL = cv2.imwrite('Python/Calibration/images/LeftTrace/TraceL' + str(self.bildenr1) + '.png', imgL)
                 cv2.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
-                self.save_traceR = cv2.imwrite('Python/Calibration/images/RightTrace/ImageR' + str(self.bildenr1) + '.png', imgR)
+                self.save_traceR = cv2.imwrite('Python/Calibration/images/RightTrace/TraceR' + str(self.bildenr1) + '.png', imgR)
                 self.bildenr1 += 1 # Increment bildenr1 with +1
                 cv2.waitKey(10)
 
 
-        #cv2.destroyAllWindows
+        cv2.destroyAllWindows
 
         #!# Kalibrering kameraer#!#
 
@@ -242,8 +248,8 @@ class GUI():
 
         self.kalib_data.write('stereoMapL_x', stereoMapL[0])
         self.kalib_data.write('stereoMapL_y', stereoMapL[1])
-        self.kalib_data.write('stereoMapR_x', stereoMapL[0])
-        self.kalib_data.write('stereoMapR_y', stereoMapL[1])
+        self.kalib_data.write('stereoMapR_x', stereoMapR[0])
+        self.kalib_data.write('stereoMapR_y', stereoMapR[1])
 
         self.kalib_data.release()
     
@@ -253,19 +259,34 @@ class GUI():
 
     def updateCameraFrames(self, frameL, frameR):
         if frameL is not None and frameR is not None:
+            # Convert frames to RGB format for display
             frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
             frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
 
-            self.imageSourceL = Image.fromarray(frameL)
-            imageL = ImageTk.PhotoImage(self.imageSourceL)
-            self.imageSourceR = Image.fromarray(frameR)
-            imageR = ImageTk.PhotoImage(self.imageSourceR)
+            # Create PhotoImage objects for topImgL and topImgR labels
+            imageL = ImageTk.PhotoImage(Image.fromarray(frameL))
+            imageR = ImageTk.PhotoImage(Image.fromarray(frameR))
 
+            # Update topImgL and topImgR labels with the original frames
             self.topImgL.configure(image=imageL)
             self.topImgL.image = imageL
             self.topImgR.configure(image=imageR)
             self.topImgR.image = imageR
 
+            if self.calibEnabled.get() == 1:
+                # Apply remapping here when calibration is enabled
+                frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+                frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+            
+            # Convert remapped frames to RGB format for display
+            frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
+            frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
+
+            # Create PhotoImage objects for botImgL and botImgR labels
+            imageL = ImageTk.PhotoImage(Image.fromarray(frameL))
+            imageR = ImageTk.PhotoImage(Image.fromarray(frameR))
+
+            # Update botImgL and botImgR labels with the calibrated frames
             self.botImgL.configure(image=imageL)
             self.botImgL.image = imageL
             self.botImgR.configure(image=imageR)
@@ -288,11 +309,11 @@ class GUI():
         # self.scaler_hueMax(self.hueMaxS.get())
         # self.scaler_valMin(self.valMinS.get())
         # self.scaler_valMax(self.valMaxS.get())
-        if self.calibEnabled.get() == 1:
-            # Apply remapping here when calibration is enabled
-            if frameL is not None and frameR is not None:
-                frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-                frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+        # if self.calibEnabled.get() == 1:
+        #     # Apply remapping here when calibration is enabled
+        #     if frameL is not None and frameR is not None:
+        #         frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+        #         frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
         self.updateCameraFrames(frameL, frameR)
 
