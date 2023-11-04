@@ -4,12 +4,23 @@ import ttkbootstrap as tb
 import cv2
 from PIL import Image, ImageTk
 import numpy as np
+import glob
 
 class GUI():
     def __init__(self) -> None:
         self.window = tb.Window(themename='superhero')
         self.window.title('Bildebehandling v0.3')
         self.window.geometry('1660x980')
+
+        #Importing the calibrated data
+        kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_READ)
+
+        self.stereoMapL_x = kalib_data.getNode('stereoMapL_x').mat()
+        self.stereoMapL_y = kalib_data.getNode('stereoMapL_y').mat()
+        self.stereoMapR_x = kalib_data.getNode('stereoMapR_x').mat()
+        self.stereoMapR_y = kalib_data.getNode('stereoMapR_y').mat()
+
+        kalib_data.release()
 
         # Initialize the cameras
         self.capL = cv2.VideoCapture(0)
@@ -59,28 +70,37 @@ class GUI():
         self.centerFrame = tb.Frame(self.window, width = 100, height= 100)
         self.centerFrame.grid(row=0, column=1, padx=5, pady=5)
 
-        calButton = tb.Button(self.centerFrame, text= 'Snapshot', command = self.snapShot, bootstyle = 'warning')
-        calButton.grid(row=0, column=1, padx=5, pady=5)
+        self.calibEnabled = IntVar(value=0)
+        self.calibCheckbox = tb.Checkbutton(self.centerFrame, text="Use Calibration", variable=self.calibEnabled, bootstyle="success")
+        self.calibCheckbox.grid(row=0, column=1, columnspan=2, padx=2, pady=2)
+
+
+        # Stereokalibrering av høyre og venstre kamera
+        self.calButton =tb.Button(self.centerFrame, text="Start Kalibrering", command=self.stereo_calibration, bootstyle="warning")
+        self.calButton.grid(row=0, column=0, padx=2, pady=2)
+
+        self.snapButton = tb.Button(self.centerFrame, text= 'Snapshot', command = self.snapShot, bootstyle = 'info')
+        self.snapButton.grid(row=1, column=0, padx=2, pady=2)
 
         self.menuButton = tb.Menubutton(self.centerFrame,text='Original', bootstyle = "info")
         menu =tb.Menu(self.menuButton)
         for option in options:
             menu.add_radiobutton(label=option, value=option, variable=self.image_output, command=lambda option=option:self.set_output(option))
         self.menuButton['menu'] = menu
-        self.menuButton.grid(row=1, column=1, padx=5, pady=5)
+        self.menuButton.grid(row=1, column=1, padx=2, pady=2)
 
-        # satMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # satMinS.grid(row=2, column=1, padx=5, pady=0)
-        # satMinL = tb.Label(self.centerFrame, text="0")
-        # satMinL.grid(row=2, column=2, padx=2, pady=0)
-        # satMinL2 = tb.Label(self.centerFrame, text="Saturation Min:")
-        # satMinL2.grid(row=2, column=0, padx=2, pady=0)
-        # satMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # satMaxS.grid(row=3, column=1, padx=2, pady=0)
-        # satMaxL = tb.Label(self.centerFrame, text="0")
-        # satMaxL.grid(row=3, column=2, padx=2, pady=0)
-        # satMaxL2 = tb.Label(self.centerFrame, text="Saturation Max:")
-        # satMaxL2.grid(row=3, column=0, padx=2, pady=0)
+        self.satMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_satMin, bootstyle = 'primary')
+        self.satMinS.grid(row=2, column=1, padx=5, pady=0)
+        self.satMinL = tb.Label(self.centerFrame, text="0")
+        self.satMinL.grid(row=2, column=2, padx=2, pady=0)
+        self.satMinL2 = tb.Label(self.centerFrame, text="Saturation Min:")
+        self.satMinL2.grid(row=2, column=0, padx=2, pady=0)
+        self.satMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_satMax, bootstyle = 'primary')
+        self.satMaxS.grid(row=3, column=1, padx=2, pady=0)
+        self.satMaxL = tb.Label(self.centerFrame, text="0")
+        self.satMaxL.grid(row=3, column=2, padx=2, pady=0)
+        self.satMaxL2 = tb.Label(self.centerFrame, text="Saturation Max:")
+        self.satMaxL2.grid(row=3, column=0, padx=2, pady=0)
 
         # hueMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
         # hueMinS.grid(row=4, column=1, padx=5, pady=0)
@@ -117,6 +137,115 @@ class GUI():
         self.topImgR.grid(row=0, column=0)
         self.botImgR = tb.Label(self.rightFrame)
         self.botImgR.grid(row=1, column=0)
+
+        self.updateCameraFrames(None, None)  # Initialize the camera frames
+
+
+    def stereo_calibration(self):
+        chessboardSize = (8,5)
+        frameSize = (640, 480)
+
+        ## Kriterier ##
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30 , 0.001)
+
+        # Forberede objekt pointere, som (0,0,0), (1,0,0) osv...
+        objp = np.zeros((chessboardSize[0] * chessboardSize[1], 3), np.float32)
+        objp[:, :2] = np.mgrid[0 : chessboardSize[0], 0:chessboardSize[1]].T.reshape(-1,2)
+
+        objp = objp * 20
+        print(objp)
+
+        #Array for å lagre objekt punkter og bilde punkter fra alle bildene.
+        objpoints = []
+        imgpointsL = []
+        imgpointsR = []
+
+        imagesLeft = sorted(glob.glob('Python/Calibration/images/LeftStereo/*.png'))
+        imagesRight = sorted(glob.glob('Python/Calibration/images/RightStereo/*.png'))
+
+        print(imagesLeft, imagesRight)
+
+        for imgLeft, imgRight, in zip(imagesLeft, imagesRight):
+            print(imgLeft, imgRight)
+            imgL = cv2.imread(imgLeft)
+            imgR = cv2.imread(imgRight)
+            grayL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
+            grayR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
+            #cv2.imshow('Venstre', grayR)
+            #cv2.waitKey(0)
+
+            # Nå skal koden finne hjørnene i sjakkmønsteret
+            retL, cornersL = cv2.findChessboardCorners(grayL, chessboardSize, None)
+            retR, cornersR = cv2.findChessboardCorners(grayR, chessboardSize, None)
+            #cv2.waitKey(0)
+            print(retL, retR)
+            if retL and retR == True:
+
+                objpoints.append(objp)
+
+                cornersL = cv2.cornerSubPix(grayL, cornersL, (11,11), (-1,-1), criteria)
+                imgpointsL.append(cornersL)
+
+                cornersR = cv2.cornerSubPix(grayR, cornersR, (11,11), (-1,-1), criteria)
+                imgpointsR.append(cornersR)
+
+                # Tegn og vis alle hjørner
+
+                cv2.drawChessboardCorners(imgL, chessboardSize, cornersL, retL)
+                self.save_traceL = cv2.imwrite('Python/Calibration/images/LeftTrace/ImageL' + str(self.bildenr1) + '.png', imgL)
+                cv2.drawChessboardCorners(imgR, chessboardSize, cornersR, retR)
+                self.save_traceR = cv2.imwrite('Python/Calibration/images/RightTrace/ImageR' + str(self.bildenr1) + '.png', imgR)
+                self.bildenr1 += 1 # Increment bildenr1 with +1
+                cv2.waitKey(10)
+
+
+        #cv2.destroyAllWindows
+
+        #!# Kalibrering kameraer#!#
+
+        retL, cameraMatrixL, distL, rvecsL, tvecsL = cv2.calibrateCamera(objpoints, imgpointsL, frameSize, None, None,)
+        heightL, widthL, channelsL = imgL.shape
+        newCameraMatrixL, roi_L = cv2.getOptimalNewCameraMatrix(cameraMatrixL, distL, (widthL, heightL), 1, (widthL, heightL))
+
+        retR, cameraMatrixR, distR, rvecsR, tvecsR = cv2.calibrateCamera(objpoints, imgpointsR, frameSize, None, None,)
+        heightR, widthR, channelsR = imgR.shape
+        newCameraMatrixR, roi_R = cv2.getOptimalNewCameraMatrix(cameraMatrixR, distR, (widthR, heightR), 1, (widthR, heightR))
+
+        #!# Stereoskopi Kalibrering #!#
+
+        flags = 0
+        flags |= cv2.CALIB_FIX_INTRINSIC
+        # Setter opp kamera matrise så bare Rot, Trns, Emat og Fmat er kalkulert.
+
+        criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2. TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+        # Dette steget blir gjennomført for å transformere mellom kameraene og kalkulere Essenstiell og Fundamentale
+
+        retStereo, newCameraMatrixL, distL, newCameraMatrixR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv2.stereoCalibrate(objpoints, imgpointsL, 
+                    imgpointsR, newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1],
+                    criteria=criteria_stereo, flags=flags)
+
+
+        #!# Stereo Gjennoppretting #!#
+
+        rectifyScale = 1
+        rectL, rectR, projMatrixL, projMatrixR, Q, roi_L, roi_R = cv2.stereoRectify(newCameraMatrixL, distL, newCameraMatrixR, distR, 
+                    grayL.shape[::-1], rot, trans, rectifyScale, (0,0))
+
+        stereoMapL = cv2.initUndistortRectifyMap(newCameraMatrixL, distL, rectL, projMatrixL, grayL.shape[::-1], cv2.CV_16SC2)
+        stereoMapR = cv2.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv2.CV_16SC2)
+
+        print("Lagrer Data!")
+
+        self.kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_WRITE)
+
+        self.kalib_data.write('stereoMapL_x', stereoMapL[0])
+        self.kalib_data.write('stereoMapL_y', stereoMapL[1])
+        self.kalib_data.write('stereoMapR_x', stereoMapL[0])
+        self.kalib_data.write('stereoMapR_y', stereoMapL[1])
+
+        self.kalib_data.release()
     
     def set_output(self, output):
         self.image_output.set(output)
@@ -142,15 +271,28 @@ class GUI():
             self.botImgR.configure(image=imageR)
             self.botImgR.image = imageR
 
-        self.window.after(50, self.update)
+        self.window.after(35, self.update)
     def update(self):
+        # self.save_traceL()
+        # self.save_traceR()
         frameL = self.capL.read()[1]
         frameR = self.capR.read()[1]
-        self.set_output(self.image_output)
-
-        
+        self.set_output(self.image_output)        
         # Pass frameL and frameR to Colorconverter when creating an instance
         # self.myColorconverter = Colorconverter(frameL, frameR) 
+        #self.updateCameraFrames(frameL, frameR)
+    # Updating scalers contiunously (Saturation-, Value-, Hue- Min/Max)
+        self.scaler_satMin(self.satMinS.get())
+        self.scaler_satMax(self.satMaxS.get())
+        # self.scaler_hueMin(self.hueMinS.get())
+        # self.scaler_hueMax(self.hueMaxS.get())
+        # self.scaler_valMin(self.valMinS.get())
+        # self.scaler_valMax(self.valMaxS.get())
+        if self.calibEnabled.get() == 1:
+            # Apply remapping here when calibration is enabled
+            if frameL is not None and frameR is not None:
+                frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+                frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
         self.updateCameraFrames(frameL, frameR)
 
@@ -173,21 +315,22 @@ class GUI():
     #     print("Scaler function called")
     #     print(f"satMinL: {self.myColorconverter.satMinL}, satMaxL: {self.myColorconverter.satMaxL}, hueMinL: {self.myColorconverter.hueMinL}, hueMaxL: {self.myColorconverter.hueMaxL}, valMinL: {self.myColorconverter.valMinL}, valMaxL: {self.myColorconverter.valMaxL}")
 
+    def scaler_satMin(self, value):
+        # self.myColorconverter.satMinL = int(value)
+        self.satMinL.config(text=f'{int(value)}')
+        
+    def scaler_satMax(self, value):
+        # self.myColorconverter.satMaxL = satMaxS.get()
+        self.satMaxL.config(text=f'{int(value)}')
+        # self.myColorconverter.hueMinL = hueMinS.get()
+        # self.myColorconverter.hueMaxL = hueMaxS.get()
+        # self.hueMinL.config(text=f'{int(hueMinS.get())}')
+        # self.hueMaxL.config(text=f'{int(hueMaxS.get())}')
 
-    #     self.myColorconverter.satMinL = satMinS.get()
-    #     self.myColorconverter.satMaxL = satMaxS.get()
-    #     satMinL.config(text=f'{int(satMinS.get())}')
-    #     satMaxL.config(text=f'{int(satMaxS.get())}')
-
-    #     self.myColorconverter.hueMinL = hueMinS.get()
-    #     self.myColorconverter.hueMaxL = hueMaxS.get()
-    #     hueMinL.config(text=f'{int(hueMinS.get())}')
-    #     hueMaxL.config(text=f'{int(hueMaxS.get())}')
-
-    #     self.myColorconverter.valMinL = valMinS.get()
-    #     self.myColorconverter.valMaxL = valMaxS.get()
-    #     valMinL.config(text=f'{int(valMinS.get())}')
-    #     valMaxL.config(text=f'{int(valMaxS.get())}')
+        # self.myColorconverter.valMinL = valMinS.get()
+        # self.myColorconverter.valMaxL = valMaxS.get()
+        # self.valMinL.config(text=f'{int(valMinS.get())}')
+        # self.valMaxL.config(text=f'{int(valMaxS.get())}')
     
     # def find_cameras(self, max_cameras_to_check=10):
     #     self.available_cameras = []
@@ -204,6 +347,8 @@ class GUI():
 
     def run(self):
         self.bildenr = 0
+        self.bildenr1 =0
+        #self.stereo_calibration()
         # self.find_cameras()
         self.update()
         self.window.mainloop()

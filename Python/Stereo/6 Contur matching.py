@@ -554,7 +554,7 @@ def update_image():
     topImageRight.imagetk = imagetk
     topImageRight.configure(image=imagetk)
 
-    root.after(100, update_image)
+    root.after(1, update_image)
 
 update_image()
 
