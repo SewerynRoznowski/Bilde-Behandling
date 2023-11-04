@@ -108,31 +108,31 @@ class GUI():
         self.satMaxL2 = tb.Label(self.centerFrame, text="Saturation Max:")
         self.satMaxL2.grid(row=3, column=0, padx=2, pady=0)
 
-        # hueMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # hueMinS.grid(row=4, column=1, padx=5, pady=0)
-        # hueMinL = tb.Label(self.centerFrame, text="0")
-        # hueMinL.grid(row=4, column=2, padx=2, pady=0)
-        # hueMinL2 = tb.Label(self.centerFrame, text="Hue Min:")
-        # hueMinL2.grid(row=4, column=0, padx=2, pady=0)
-        # hueMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # hueMaxS.grid(row=5, column=1, padx=2, pady=0)
-        # hueMaxL = tb.Label(self.centerFrame, text="0")
-        # hueMaxL.grid(row=5, column=2, padx=2, pady=0)
-        # hueMaxL2 = tb.Label(self.centerFrame, text="Hue Max:")
-        # hueMaxL2.grid(row=5, column=0, padx=2, pady=0)
+        self.hueMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_hueMin, bootstyle = 'primary')
+        self.hueMinS.grid(row=4, column=1, padx=5, pady=0)
+        self.hueMinL = tb.Label(self.centerFrame, text="0")
+        self.hueMinL.grid(row=4, column=2, padx=2, pady=0)
+        self.hueMinL2 = tb.Label(self.centerFrame, text="Hue Min:")
+        self.hueMinL2.grid(row=4, column=0, padx=2, pady=0)
+        self.hueMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_hueMax, bootstyle = 'primary')
+        self.hueMaxS.grid(row=5, column=1, padx=2, pady=0)
+        self.hueMaxL = tb.Label(self.centerFrame, text="0")
+        self.hueMaxL.grid(row=5, column=2, padx=2, pady=0)
+        self.hueMaxL2 = tb.Label(self.centerFrame, text="Hue Max:")
+        self.hueMaxL2.grid(row=5, column=0, padx=2, pady=0)
 
-        # valMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # valMinS.grid(row=6, column=1, padx=5, pady=0)
-        # valMinL = tb.Label(self.centerFrame, text="0")
-        # valMinL.grid(row=6, column=2, padx=2, pady=0)
-        # valMinL2 = tb.Label(self.centerFrame, text="Value Min:")
-        # valMinL2.grid(row=6, column=0, padx=2, pady=0)
-        # valMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler, bootstyle = 'primary')
-        # valMaxS.grid(row=7, column=1, padx=2, pady=0)
-        # valMaxL = tb.Label(self.centerFrame, text="0")
-        # valMaxL.grid(row=7, column=2, padx=2, pady=0)
-        # valMaxL2 = tb.Label(self.centerFrame, text="Value Max:")
-        # valMaxL2.grid(row=7, column=0, padx=2, pady=0)
+        self.valMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_valMin, bootstyle = 'primary')
+        self.valMinS.grid(row=6, column=1, padx=5, pady=0)
+        self.valMinL = tb.Label(self.centerFrame, text="0")
+        self.valMinL.grid(row=6, column=2, padx=2, pady=0)
+        self.valMinL2 = tb.Label(self.centerFrame, text="Value Min:")
+        self.valMinL2.grid(row=6, column=0, padx=2, pady=0)
+        self.valMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_valMax, bootstyle = 'primary')
+        self.valMaxS.grid(row=7, column=1, padx=2, pady=0)
+        self.valMaxL = tb.Label(self.centerFrame, text="0")
+        self.valMaxL.grid(row=7, column=2, padx=2, pady=0)
+        self.valMaxL2 = tb.Label(self.centerFrame, text="Value Max:")
+        self.valMaxL2.grid(row=7, column=0, padx=2, pady=0)
 
         #Center frame end
 
@@ -305,10 +305,10 @@ class GUI():
     # Updating scalers contiunously (Saturation-, Value-, Hue- Min/Max)
         self.scaler_satMin(self.satMinS.get())
         self.scaler_satMax(self.satMaxS.get())
-        # self.scaler_hueMin(self.hueMinS.get())
-        # self.scaler_hueMax(self.hueMaxS.get())
-        # self.scaler_valMin(self.valMinS.get())
-        # self.scaler_valMax(self.valMaxS.get())
+        self.scaler_hueMin(self.hueMinS.get())
+        self.scaler_hueMax(self.hueMaxS.get())
+        self.scaler_valMin(self.valMinS.get())
+        self.scaler_valMax(self.valMaxS.get())
         # if self.calibEnabled.get() == 1:
         #     # Apply remapping here when calibration is enabled
         #     if frameL is not None and frameR is not None:
@@ -337,21 +337,31 @@ class GUI():
     #     print(f"satMinL: {self.myColorconverter.satMinL}, satMaxL: {self.myColorconverter.satMaxL}, hueMinL: {self.myColorconverter.hueMinL}, hueMaxL: {self.myColorconverter.hueMaxL}, valMinL: {self.myColorconverter.valMinL}, valMaxL: {self.myColorconverter.valMaxL}")
 
     def scaler_satMin(self, value):
+        rounded_value = round(float(value)) 
         # self.myColorconverter.satMinL = int(value)
-        self.satMinL.config(text=f'{int(value)}')
-        
+        self.satMinL.config(text=f'{rounded_value}')        
     def scaler_satMax(self, value):
+        rounded_value = round(float(value)) 
         # self.myColorconverter.satMaxL = satMaxS.get()
-        self.satMaxL.config(text=f'{int(value)}')
-        # self.myColorconverter.hueMinL = hueMinS.get()
-        # self.myColorconverter.hueMaxL = hueMaxS.get()
-        # self.hueMinL.config(text=f'{int(hueMinS.get())}')
-        # self.hueMaxL.config(text=f'{int(hueMaxS.get())}')
+        self.satMaxL.config(text=f'{rounded_value}')
 
+    def scaler_hueMin(self, value):
+        rounded_value = round(float(value)) 
+        # self.myColorconverter.hueMinL = hueMinS.get()
+        self.hueMinL.config(text=f'{rounded_value}')
+    def scaler_hueMax(self, value):
+        rounded_value = round(float(value)) 
+        # self.myColorconverter.hueMaxL = hueMaxS.get()
+        self.hueMaxL.config(text=f'{rounded_value}')
+
+    def scaler_valMin(self, value):
+        rounded_value = round(float(value)) 
         # self.myColorconverter.valMinL = valMinS.get()
+        self.valMinL.config(text=f'{rounded_value}')
+    def scaler_valMax(self, value):
+        rounded_value = round(float(value)) 
         # self.myColorconverter.valMaxL = valMaxS.get()
-        # self.valMinL.config(text=f'{int(valMinS.get())}')
-        # self.valMaxL.config(text=f'{int(valMaxS.get())}')
+        self.valMaxL.config(text=f'{rounded_value}')
     
     # def find_cameras(self, max_cameras_to_check=10):
     #     self.available_cameras = []
