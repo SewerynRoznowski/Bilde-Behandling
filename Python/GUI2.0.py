@@ -12,6 +12,8 @@ class GUI():
         self.window.title('Bildebehandling v0.3')
         self.window.geometry('1660x980')
 
+        self.myColorconverter = Colorconverter()
+
         #Importing the calibrated data
         kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_READ)
 
@@ -27,7 +29,7 @@ class GUI():
         # print(self.stereoMapR_y.shape)
 
         # Initialize the cameras
-        self.capL = cv2.VideoCapture(0)
+        self.capL = cv2.VideoCapture(1)
         if not self.capL.isOpened():
             print("Error: Left Camera not opened")
         else:
@@ -37,7 +39,7 @@ class GUI():
         self.cameraWidthL = self.capL.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightL = self.capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        self.capR = cv2.VideoCapture(2)
+        self.capR = cv2.VideoCapture(1)
         if not self.capL.isOpened():
             print("Error: Right Camera not opened")
         else:
@@ -59,7 +61,7 @@ class GUI():
         
         # For dropdown menyen og de forskjellige typer masker som kan brukes for å finne hvem hører til hvor
         self.image_output = StringVar(value='Original')
-        options = ['Original', 'Thresholding', 'Erosion', 'Dialation', 'Contour1', 'Contour2']
+        self.options = ['Original', 'Thresholding', 'Erosion', 'Dialation', 'Contour1', 'Contour2']
 
         # Create frames and labels
         # Left frame of the program
@@ -90,46 +92,46 @@ class GUI():
 
         self.menuButton = tb.Menubutton(self.centerFrame,text='Original', bootstyle = "info")
         menu =tb.Menu(self.menuButton)
-        for option in options:
+        for option in self.options:
             menu.add_radiobutton(label=option, value=option, variable=self.image_output, command=lambda option=option:self.set_output(option))
         self.menuButton['menu'] = menu
         self.menuButton.grid(row=1, column=1, padx=2, pady=2)
 
-        self.satMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_satMin, bootstyle = 'primary')
+        self.satMinS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.satMinL, command=self.scaler_satMin, bootstyle = 'primary')
         self.satMinS.grid(row=2, column=1, padx=5, pady=0)
-        self.satMinL = tb.Label(self.centerFrame, text="0")
+        self.satMinL = tb.Label(self.centerFrame, text=str(self.myColorconverter.satMinL))
         self.satMinL.grid(row=2, column=2, padx=2, pady=0)
         self.satMinL2 = tb.Label(self.centerFrame, text="Saturation Min:")
         self.satMinL2.grid(row=2, column=0, padx=2, pady=0)
-        self.satMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_satMax, bootstyle = 'primary')
+        self.satMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.satMaxL, command=self.scaler_satMax, bootstyle = 'primary')
         self.satMaxS.grid(row=3, column=1, padx=2, pady=0)
-        self.satMaxL = tb.Label(self.centerFrame, text="0")
+        self.satMaxL = tb.Label(self.centerFrame, text=str(self.myColorconverter.satMaxL))
         self.satMaxL.grid(row=3, column=2, padx=2, pady=0)
         self.satMaxL2 = tb.Label(self.centerFrame, text="Saturation Max:")
         self.satMaxL2.grid(row=3, column=0, padx=2, pady=0)
 
-        self.hueMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_hueMin, bootstyle = 'primary')
+        self.hueMinS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.hueMinL , command=self.scaler_hueMin, bootstyle = 'primary')
         self.hueMinS.grid(row=4, column=1, padx=5, pady=0)
-        self.hueMinL = tb.Label(self.centerFrame, text="0")
+        self.hueMinL = tb.Label(self.centerFrame, text=str(self.myColorconverter.hueMinL))
         self.hueMinL.grid(row=4, column=2, padx=2, pady=0)
         self.hueMinL2 = tb.Label(self.centerFrame, text="Hue Min:")
         self.hueMinL2.grid(row=4, column=0, padx=2, pady=0)
-        self.hueMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_hueMax, bootstyle = 'primary')
+        self.hueMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.hueMaxL, command=self.scaler_hueMax, bootstyle = 'primary')
         self.hueMaxS.grid(row=5, column=1, padx=2, pady=0)
-        self.hueMaxL = tb.Label(self.centerFrame, text="0")
+        self.hueMaxL = tb.Label(self.centerFrame, text=str(self.myColorconverter.hueMaxL))
         self.hueMaxL.grid(row=5, column=2, padx=2, pady=0)
         self.hueMaxL2 = tb.Label(self.centerFrame, text="Hue Max:")
         self.hueMaxL2.grid(row=5, column=0, padx=2, pady=0)
 
-        self.valMinS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_valMin, bootstyle = 'primary')
+        self.valMinS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.valMinL, command=self.scaler_valMin, bootstyle = 'primary')
         self.valMinS.grid(row=6, column=1, padx=5, pady=0)
-        self.valMinL = tb.Label(self.centerFrame, text="0")
+        self.valMinL = tb.Label(self.centerFrame, text=str(self.myColorconverter.valMinL))
         self.valMinL.grid(row=6, column=2, padx=2, pady=0)
         self.valMinL2 = tb.Label(self.centerFrame, text="Value Min:")
         self.valMinL2.grid(row=6, column=0, padx=2, pady=0)
-        self.valMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, command=self.scaler_valMax, bootstyle = 'primary')
+        self.valMaxS = tb.Scale(self.centerFrame, from_= 0, to=255, value=self.myColorconverter.valMaxL, command=self.scaler_valMax, bootstyle = 'primary')
         self.valMaxS.grid(row=7, column=1, padx=2, pady=0)
-        self.valMaxL = tb.Label(self.centerFrame, text="0")
+        self.valMaxL = tb.Label(self.centerFrame, text=str(self.myColorconverter.valMaxL))
         self.valMaxL.grid(row=7, column=2, padx=2, pady=0)
         self.valMaxL2 = tb.Label(self.centerFrame, text="Value Max:")
         self.valMaxL2.grid(row=7, column=0, padx=2, pady=0)
@@ -143,9 +145,6 @@ class GUI():
         self.topImgR.grid(row=0, column=0)
         self.botImgR = tb.Label(self.rightFrame)
         self.botImgR.grid(row=1, column=0)
-
-        self.updateCameraFrames(None, None)  # Initialize the camera frames
-
 
     def stereo_calibration(self):
         chessboardSize = (8,5)
@@ -259,13 +258,52 @@ class GUI():
 
     def updateCameraFrames(self, frameL, frameR):
         if frameL is not None and frameR is not None:
-            # Convert frames to RGB format for display
-            frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
-            frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
 
-            # Create PhotoImage objects for topImgL and topImgR labels
-            imageL = ImageTk.PhotoImage(Image.fromarray(frameL))
-            imageR = ImageTk.PhotoImage(Image.fromarray(frameR))
+            if self.calibEnabled.get() == 1:
+                # Apply remapping here when calibration is enabled
+                frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+                frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
+                
+
+            processedImageL = self.myColorconverter.main_process_pipeline(frameL)
+            processedImageR = self.myColorconverter.main_process_pipeline(frameR)
+
+            # pass the filtered contours from the left and right frames to the contour matching function
+            matchedContours = self.myColorconverter.contour_matching(processedImageL[7], processedImageR[7])
+
+
+            # Draw contours on the original frames ----------------------------------------
+            # SKAL FLYTTES TIL EGEN FUNKSJON TIL MANDAG
+            for x in matchedContours:
+                cv2.drawContours(frameL, x[0], -1, (0,255,0), 3)
+                cv2.drawContours(frameR, x[1], -1, (0,255,0), 3)
+
+                # find center of contours
+                M = cv2.moments(x[0])
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+
+                M = cv2.moments(x[1])
+                cX1 = int(M["m10"] / M["m00"])
+                cY1 = int(M["m01"] / M["m00"])
+
+                # draw the contour and center of the shape on the image
+                cv2.circle(frameL, (cX, cY), 7, (255, 255, 255), -1)
+                cv2.putText(frameL, "center", (cX - 20, cY - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                cv2.circle(frameR, (cX1, cY1), 7, (255, 255, 255), -1)
+                cv2.putText(frameR, "center", (cX1 - 20, cY1 - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                
+            # --------------------------------------------------------------------------------
+
+            # Convert frames to RGB format for display in top labels
+            topLabelFrameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
+            topLabelFrameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
+
+            # Convert frames to HSV format for color conversion
+            imageL = ImageTk.PhotoImage(Image.fromarray(topLabelFrameL))
+            imageR = ImageTk.PhotoImage(Image.fromarray(topLabelFrameR))
 
             # Update topImgL and topImgR labels with the original frames
             self.topImgL.configure(image=imageL)
@@ -273,49 +311,33 @@ class GUI():
             self.topImgR.configure(image=imageR)
             self.topImgR.image = imageR
 
-            if self.calibEnabled.get() == 1:
-                # Apply remapping here when calibration is enabled
-                frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-                frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-            
-            # Convert remapped frames to RGB format for display
-            frameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
-            frameR = cv2.cvtColor(frameR, cv2.COLOR_BGR2RGB)
+            # Display the processed image in the bottom labels if the function was successful
+            if processedImageL[0] == True and processedImageR[0] == True:
 
-            # Create PhotoImage objects for botImgL and botImgR labels
-            imageL = ImageTk.PhotoImage(Image.fromarray(frameL))
-            imageR = ImageTk.PhotoImage(Image.fromarray(frameR))
+                selecedOutput = self.image_output.get()
+                selectedOutputIndex = self.options.index(selecedOutput)
+                
+                # Create PhotoImage objects for botImgL and botImgR labels
+                imageL = ImageTk.PhotoImage(Image.fromarray(processedImageL[selectedOutputIndex +1]))
+                imageR = ImageTk.PhotoImage(Image.fromarray(processedImageR[selectedOutputIndex +1]))
 
-            # Update botImgL and botImgR labels with the calibrated frames
-            self.botImgL.configure(image=imageL)
-            self.botImgL.image = imageL
-            self.botImgR.configure(image=imageR)
-            self.botImgR.image = imageR
+                # Update botImgL and botImgR labels with the calibrated frames
+                self.botImgL.configure(image=imageL)
+                self.botImgL.image = imageL
+                self.botImgR.configure(image=imageR)
+                self.botImgR.image = imageR
 
-        self.window.after(35, self.update)
     def update(self):
-        # self.save_traceL()
-        # self.save_traceR()
-        frameL = self.capL.read()[1]
-        frameR = self.capR.read()[1]
-        self.set_output(self.image_output)        
-        # Pass frameL and frameR to Colorconverter when creating an instance
-        # self.myColorconverter = Colorconverter(frameL, frameR) 
-        #self.updateCameraFrames(frameL, frameR)
-    # Updating scalers contiunously (Saturation-, Value-, Hue- Min/Max)
-        self.scaler_satMin(self.satMinS.get())
-        self.scaler_satMax(self.satMaxS.get())
-        self.scaler_hueMin(self.hueMinS.get())
-        self.scaler_hueMax(self.hueMaxS.get())
-        self.scaler_valMin(self.valMinS.get())
-        self.scaler_valMax(self.valMaxS.get())
-        # if self.calibEnabled.get() == 1:
-        #     # Apply remapping here when calibration is enabled
-        #     if frameL is not None and frameR is not None:
-        #         frameL = cv2.remap(frameL, self.stereoMapL_x, self.stereoMapL_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
-        #         frameR = cv2.remap(frameR, self.stereoMapR_x, self.stereoMapR_y, cv2.INTER_LANCZOS4, cv2.BORDER_CONSTANT, 0)
 
-        self.updateCameraFrames(frameL, frameR)
+        ret,frameL = self.capL.read()
+        ret1,frameR = self.capR.read()
+
+
+
+        if ret and ret1:
+            self.updateCameraFrames(frameL, frameR)
+
+        self.window.after(100, self.update)
 
 
 
@@ -331,36 +353,35 @@ class GUI():
             self.bildenr += 1
         except Exception as e:
             print("Error:", str(e))
-    
-    # def scaler(self, e):
-    #     print("Scaler function called")
-    #     print(f"satMinL: {self.myColorconverter.satMinL}, satMaxL: {self.myColorconverter.satMaxL}, hueMinL: {self.myColorconverter.hueMinL}, hueMaxL: {self.myColorconverter.hueMaxL}, valMinL: {self.myColorconverter.valMinL}, valMaxL: {self.myColorconverter.valMaxL}")
 
     def scaler_satMin(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.satMinL = int(value)
-        self.satMinL.config(text=f'{rounded_value}')        
+        self.myColorconverter.satMinL = int(rounded_value)
+        self.satMinL.config(text=f'{rounded_value}')     
+
     def scaler_satMax(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.satMaxL = satMaxS.get()
+        self.myColorconverter.satMaxL = int(rounded_value)
         self.satMaxL.config(text=f'{rounded_value}')
 
     def scaler_hueMin(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.hueMinL = hueMinS.get()
+        self.myColorconverter.hueMinL = int(rounded_value)
         self.hueMinL.config(text=f'{rounded_value}')
+  
     def scaler_hueMax(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.hueMaxL = hueMaxS.get()
+        self.myColorconverter.hueMaxL = int(rounded_value)
         self.hueMaxL.config(text=f'{rounded_value}')
 
     def scaler_valMin(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.valMinL = valMinS.get()
+        self.myColorconverter.valMinL = int(rounded_value)
         self.valMinL.config(text=f'{rounded_value}')
+
     def scaler_valMax(self, value):
         rounded_value = round(float(value)) 
-        # self.myColorconverter.valMaxL = valMaxS.get()
+        self.myColorconverter.valMaxL = int(rounded_value)
         self.valMaxL.config(text=f'{rounded_value}')
     
     # def find_cameras(self, max_cameras_to_check=10):
@@ -384,50 +405,310 @@ class GUI():
         self.update()
         self.window.mainloop()
 
-# class Colorconverter():
-#     def __init__(self, frameL, frameR) -> None:
-#         self.frameL = frameL
-#         self.frameR = frameR
-#         self.hueMinL = 175
-#         self.hueMaxL = 25
-#         self.satMinL = 160
-#         self.satMaxL = 255
-#         self.valMinL = 150
-#         self.valMaxL = 255
-#         self.erodeL = None
-#         self.erodeR = None
-#         self.maskL = None
-#         self.maskR = None
-#         self.hsvL = cv2.cvtColor(frameL, cv2.COLOR_BGR2HSV)
-#         self.hsvR = cv2.cvtColor(frameR, cv2.COLOR_BGR2HSV)
+class Colorconverter():
+    def __init__(self) -> None:
+        # self.frameL = frameL
+        # self.frameR = frameR
+        self.hueMinL = 175
+        self.hueMaxL = 25
+        self.satMinL = 160
+        self.satMaxL = 255
+        self.valMinL = 150
+        self.valMaxL = 255
+        self.erodeL = None
+        self.erodeR = None
+        self.maskL = None
+        self.maskR = None
+        # self.hsvL = cv2.cvtColor(frameL, cv2.COLOR_BGR2HSV)
+        # self.hsvR = cv2.cvtColor(frameR, cv2.COLOR_BGR2HSV)
 
-#     def create_mask(self):
-#         print(f"satMinLmask: {self.satMinL}, satMaxLmask: {self.satMaxL}, hueMinLmask: {self.hueMinL}, hueMaxLmask: {self.hueMaxL}, valMinLmask: {self.valMinL}, valMaxLmask: {self.valMaxL}")
-#         if self.hueMinL > self.hueMaxL:
-#             maskl = cv2.inRange(self.hsvL, (0, self.satMinL, self.valMinL), (self.hueMaxL, self.satMaxL, self.valMaxL))
-#             maskh = cv2.inRange(self.hsvL, (self.hueMinL, self.satMinL, self.valMinL), (255, self.satMaxL, self.valMaxL))
-#             self.maskL = cv2.bitwise_or(maskl, maskh)
+    def mask_from_HSV(self, HSVImage, hueMinL, hueMaxL, satMinL, satMaxL, valMinL, valMaxL):
+        
+        '''
+        Creates a binary mask based on the HSV values given by UI sliders.
 
-#             maskl = cv2.inRange(self.hsvR, (0, self.satMinL, self.valMinL), (self.hueMaxL, self.satMaxL, self.valMaxL))
-#             maskh = cv2.inRange(self.hsvR, (self.hueMinL, self.satMinL, self.valMinL), (255,self.satMaxL, self.valMaxL))
-#             self.maskR = cv2.bitwise_or(maskl, maskh)
-#         else:
-#             self.maskL = cv2.inRange(self.hsvL, (self.hueMinL, self.satMinL, self.valMinL), (self.hueMaxL, self.satMaxL, self.valMaxL))
-#             self.maskR = cv2.inRange(self.hsvR, (self.hueMinL, self.satMinL, self.valMinL), (self.hueMaxL, self.satMaxL, self.valMaxL))
+        Parameters:
+            A HSV image 
+         
+        Returns: 
+            Whether or not the funtion was successful (Bool true/false)
+            A binary image 
+        '''
 
-#     def erode_mask(self):
-#             self.create_mask()
-#             kernel = np.ones((10,10), np.uint8)
-#             self.maskL = cv2.threshold(self.maskL, 1, 255, cv2.THRESH_BINARY)[1]
-#             self.maskR = cv2.threshold(self.maskR, 1, 255, cv2.THRESH_BINARY)[1]
-#             self.erodeL = cv2.erode(self.maskL, kernel, iterations=1)
-#             self.erodeR = cv2.erode(self.maskR, kernel, iterations=1)
-#             print('erodeR')
+        try: 
+            if hueMinL > hueMaxL:
+                # If hueMin is greater than hueMax, the mask must be created in two parts and combined
+                maskl = cv2.inRange(HSVImage, (0, satMinL, valMinL), (hueMaxL, satMaxL, valMaxL))
+                maskh = cv2.inRange(HSVImage, (hueMinL, satMinL, valMinL), (255, satMaxL, valMaxL))
+                binaryMask = cv2.bitwise_or(maskl, maskh)
 
-#     def dilate_mask(self):
-#             kernel = np.ones((5,5), np.uint8)
+            else:
+                # If hueMin is less than hueMax, the mask can be created in one part
+                binaryMask = cv2.inRange(HSVImage, (hueMinL, satMinL, valMinL), (hueMaxL, satMaxL, valMaxL))
+            
+            return True, binaryMask 
+        except: 
+            print("Error: Could not create mask")
+            return False, None
+        
 
-#             self.dilateL = cv2.dilate(self.erodeL, kernel, iterations=1)
-#             self.dilateR = cv2.dilate(self.erodeR, kernel, iterations=1)
-app = GUI()
-app.run()
+    def erode_binary_mask(self, binaryImage):
+        '''
+        Erodes a binary image to remove noise.
+
+        Parameters:
+            A binary image
+
+        Returns:
+            Whether or not the function was successful (Bool true/false)
+            A binary image
+        '''
+        try:
+
+            # create a kernel for erosion (!SIZE MUST BE ODD!, for example (5,5))
+            kernel = np.ones((5,5), np.uint8)
+
+            erodedMask = cv2.erode(binaryImage, kernel, iterations=1)
+
+            return True, erodedMask
+        
+        except: 
+            print("Error: Could not erode mask")
+            return False, None
+
+    def dilate_binary_mask(self, binaryImage):
+            '''
+            Dilates a binary image to restore original shapes.
+
+            Parameters:
+                A binary image
+
+            Returns:
+                Whether or not the function was successful (Bool true/false)
+                A binary image
+            '''
+            try: 
+
+                # create a kernel for dialation (!SIZE MUST BE ODD!, for example (5,5))
+                kernel = np.ones((5,5), np.uint8)
+
+                dialatedMask = cv2.dilate(binaryImage, kernel, iterations=1)
+
+                return True, dialatedMask
+            
+            except:
+                print("Error: Could not dilate mask")
+                return False, None
+            
+    def find_contours(self, binaryImage):
+        '''
+        Finds contours in a binary image. 
+
+        Parameters:
+            MatLike: A binary image
+
+        Returns:
+            Bool: Whether or not the function was successful (Bool true/false)
+            Tuple: A chaincode for all contours in the image
+        '''
+
+        try:
+            # Find contours in the binary image
+            contours = cv2.findContours(binaryImage, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+            
+            return True, contours
+        
+        except:
+            print("Error: Could not find contours")
+            return False, None
+
+    def filter_contour_by_size(self, contourstobefiltered, contourMinSize): 
+        '''
+        Filters contours by size. 
+
+        Parameters:
+            Tuple: A chaincode for all contours in the image
+            Int: The minimum size of the contours to be kept
+
+        Returns:
+            Bool: Whether or not the function was successful (Bool true/false)
+            Tuple: Chaincode for all the contours that are larger than the minimum size
+        '''
+
+        try:
+            # Filter contours by size
+            filteredContours = []
+            for x in contourstobefiltered:
+                if cv2.contourArea(x) > contourMinSize:
+                    filteredContours.append(x)
+            
+            return True, filteredContours
+        
+        except:
+            print("Error: Could not filter contours by size")
+            return False, None
+        
+    def draw_contours(self, image, contours):
+        '''
+        Draws contours on an image. 
+
+        Parameters:
+            MatLike: An image
+            Tuple: A chaincode for all contours in the image
+
+        Returns:
+            Bool: Whether or not the function was successful (Bool true/false)
+            MatLike: An image with the contours drawn on it
+        '''
+
+        try:
+            # Draw contours on the image
+            imageCopy = image.copy()
+            cv2.drawContours(imageCopy, contours, -1, (0,255,0), 3)
+
+            return True, imageCopy
+        
+        except:
+            print("Error: Could not draw contours")
+            return False, None
+        
+    def main_process_pipeline(self, frame):
+        
+        '''
+        The main process pipeline for a single camera. 
+
+        Parameters:
+            MatLike: An image
+
+        Returns: 
+            Bool: Whether or not the function was successful (Bool true/false)
+            MatLike: The original image
+            MatLike: A binary mask
+            MatLike: An eroded binary mask
+            MatLike: A dilated binary mask
+            MatLike: An image with contours drawn on it
+            MatLike: An image with filtered contours drawn on it
+            Tuple: A chaincode for all the filtered contours
+
+        '''
+        returnValues = [False, None, None, None, None, None]
+        contourFilterSize = 1000
+
+        # Convert frame to HSV
+        hsvImage = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        maskSuccess, binaryMask = self.mask_from_HSV(hsvImage, self.hueMinL, self.hueMaxL, self.satMinL, self.satMaxL, self.valMinL, self.valMaxL)
+
+        if maskSuccess == False: 
+            return returnValues
+
+        erodeSuccess, erodedMask = self.erode_binary_mask(binaryMask)
+
+        if erodeSuccess == False:
+            return returnValues
+        
+        dilateSuccess, dilatedMask = self.dilate_binary_mask(erodedMask)
+
+        if dilateSuccess == False:
+            return returnValues
+        
+        contourSuccess, contours = self.find_contours(dilatedMask)
+
+        if contourSuccess == False:
+            return returnValues
+        
+        drawSuccess, imageWithContours = self.draw_contours(frame, contours)
+
+        if drawSuccess == False:
+            return returnValues
+        
+        filterSuccess, filteredContours = self.filter_contour_by_size(contours, contourFilterSize)
+
+        if filterSuccess == False:
+            return returnValues
+        
+        drawSuccess, imageWithFilteredContours = self.draw_contours(frame, filteredContours)
+
+        if drawSuccess == False:
+            return returnValues
+        
+        returnValues = [True, frame ,binaryMask, erodedMask, dilatedMask,imageWithContours, imageWithFilteredContours, filteredContours]
+
+        return returnValues
+    
+    def contour_matching(self, contoursFromLeftFrame, ContoursFromRightFrame):
+        '''
+        Matches contours from two frames.
+
+        Parameters:
+            Tuple: A chaincode for all contours in the left image
+            Tuple: A chaincode for all contours in the right image
+
+        Returns:
+            Bool: Whether or not the function was successful (Bool true/false)
+            List: A list of the best matches [chaincode for contour in left image, chaincode for contour in right image, match score]
+
+        '''
+
+        # Define empty lists for storing matches and matched contours
+        allMatches = [] # contans all matches and their scores
+        matchedContoursLeft = []
+        matchedContoursRight = []
+        bestMatches = []
+
+        for idx, x in enumerate(contoursFromLeftFrame):
+            for idy, y in enumerate(ContoursFromRightFrame):
+                matchScore = cv2.matchShapes(x, y, 1, 0.0)
+                allMatches.append([idx, idy, matchScore])
+
+        # Sort the matches by score
+        allMatches.sort(key=lambda match: match[2])
+
+        # Find the best matches and add them to the bestMatches list
+        # Also add the matched contours to the matchedContoursLeft and matchedContoursRight lists
+        # This is done to avoid matching the same contour twice
+        for x in allMatches:
+            if x[0] not in matchedContoursLeft and x[1] not in matchedContoursRight:
+                matchedContoursLeft.append(x[0])
+                matchedContoursRight.append(x[1])
+                bestMatches.append([contoursFromLeftFrame[x[0]], ContoursFromRightFrame[x[1]], x[2]])
+
+        return bestMatches
+    
+
+    def stereo_triangulation(self, matches, contoursL, contoursR):
+        '''
+        Triangulates the matched contours from two frames.
+
+        Parameters:
+            List: A list of the best matches (Contains the index of the contour in the left image, the index of the contour in the right image and the match score)
+            Tuple: A chaincode for all contours in the left image
+            Tuple: A chaincode for all contours in the right image
+
+        Returns:
+            Bool: Whether or not the function was successful (Bool true/false)
+            List: A list of the triangulated points
+        ''' 
+
+        triangulatedPoints = []
+
+        for x in matches:
+            # Get the coordinates of the matched contours
+            leftContour = contoursL[x[0]]
+            rightContour = contoursR[x[1]]
+
+            # Find the center of the contours
+            leftCenter = cv2.moments(leftContour)
+            rightCenter = cv2.moments(rightContour)
+
+            # Calculate the triangulated point
+            triangulatedPoint = cv2.triangulatePoints(projMatrixL, projMatrixR, leftCenter, rightCenter)
+
+            # Add the triangulated point to the list
+            triangulatedPoints.append(triangulatedPoint)
+    
+if __name__ == '__main__':
+
+    app = GUI()
+    app.run()
