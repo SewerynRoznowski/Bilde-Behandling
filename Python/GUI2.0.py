@@ -29,7 +29,7 @@ class GUI():
         # print(self.stereoMapR_y.shape)
 
         # Initialize the cameras
-        self.capL = cv2.VideoCapture(1)
+        self.capL = cv2.VideoCapture(0)
         if not self.capL.isOpened():
             print("Error: Left Camera not opened")
         else:
@@ -48,6 +48,7 @@ class GUI():
         self.capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cameraWidthR = self.capR.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightR = self.capR.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
 
         retL, frameL = self.capL.read()
         retR, frameR = self.capR.read()
@@ -241,6 +242,9 @@ class GUI():
         stereoMapL = cv2.initUndistortRectifyMap(newCameraMatrixL, distL, rectL, projMatrixL, grayL.shape[::-1], cv2.CV_16SC2)
         stereoMapR = cv2.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv2.CV_16SC2)
 
+        self.myColorconverter.projectionMatrixL = projMatrixL
+        self.myColorconverter.projectionMatrixR = projMatrixR
+
         print("Lagrer Data!")
 
         self.kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_WRITE)
@@ -271,10 +275,12 @@ class GUI():
             # pass the filtered contours from the left and right frames to the contour matching function
             matchedContours = self.myColorconverter.contour_matching(processedImageL[7], processedImageR[7])
 
+            distanceToContours = self.myColorconverter.stereo_triangulation(matchedContours, processedImageL[7], processedImageR[7])
+
 
             # Draw contours on the original frames ----------------------------------------
             # SKAL FLYTTES TIL EGEN FUNKSJON TIL MANDAG
-            for x in matchedContours:
+            for idx,x in enumerate(matchedContours):
                 cv2.drawContours(frameL, x[0], -1, (0,255,0), 3)
                 cv2.drawContours(frameR, x[1], -1, (0,255,0), 3)
 
@@ -289,10 +295,10 @@ class GUI():
 
                 # draw the contour and center of the shape on the image
                 cv2.circle(frameL, (cX, cY), 7, (255, 255, 255), -1)
-                cv2.putText(frameL, "center", (cX - 20, cY - 20),
+                cv2.putText(frameL, "center: " + distanceToContours, (cX - 20, cY - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                 cv2.circle(frameR, (cX1, cY1), 7, (255, 255, 255), -1)
-                cv2.putText(frameR, "center", (cX1 - 20, cY1 - 20),
+                cv2.putText(frameR, "center: " + distanceToContours, (cX1 - 20, cY1 - 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
                 
             # --------------------------------------------------------------------------------
@@ -336,6 +342,9 @@ class GUI():
 
         if ret and ret1:
             self.updateCameraFrames(frameL, frameR)
+        
+        else:
+            print("Error: Failed to retrieve frames from cameras.")
 
         self.window.after(100, self.update)
 
@@ -421,6 +430,8 @@ class Colorconverter():
         self.maskR = None
         # self.hsvL = cv2.cvtColor(frameL, cv2.COLOR_BGR2HSV)
         # self.hsvR = cv2.cvtColor(frameR, cv2.COLOR_BGR2HSV)
+        self.projectionMatrixL = None
+        self.projectionMatrixR = None
 
     def mask_from_HSV(self, HSVImage, hueMinL, hueMaxL, satMinL, satMaxL, valMinL, valMaxL):
         
@@ -669,10 +680,14 @@ class Colorconverter():
         # Also add the matched contours to the matchedContoursLeft and matchedContoursRight lists
         # This is done to avoid matching the same contour twice
         for x in allMatches:
-            if x[0] not in matchedContoursLeft and x[1] not in matchedContoursRight:
-                matchedContoursLeft.append(x[0])
-                matchedContoursRight.append(x[1])
-                bestMatches.append([contoursFromLeftFrame[x[0]], ContoursFromRightFrame[x[1]], x[2]])
+            avg = cv2.contourArea(contoursFromLeftFrame[x[0]]) + cv2.contourArea(ContoursFromRightFrame[x[1]]) / 2.0
+            diff = abs(cv2.contourArea(contoursFromLeftFrame[x[0]]) - cv2.contourArea(ContoursFromRightFrame[x[1]]))
+
+            if x[2] < 0.2 and diff <= 0.1*avg:
+                if x[0] not in matchedContoursLeft and x[1] not in matchedContoursRight:
+                    matchedContoursLeft.append(x[0])
+                    matchedContoursRight.append(x[1])
+                    bestMatches.append([contoursFromLeftFrame[x[0]], ContoursFromRightFrame[x[1]], x[2]])
 
         return bestMatches
     
@@ -699,14 +714,32 @@ class Colorconverter():
             rightContour = contoursR[x[1]]
 
             # Find the center of the contours
-            leftCenter = cv2.moments(leftContour)
-            rightCenter = cv2.moments(rightContour)
+                # find center of contours
+            M = cv2.moments(leftContour)
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+
+            M = cv2.moments(rightContour)
+            cX1 = int(M["m10"] / M["m00"])
+            cY1 = int(M["m01"] / M["m00"])
+
+            leftPoint = [cX, cY, 1]
+            rightPoint = [cX1, cY1, 1]
 
             # Calculate the triangulated point
-            triangulatedPoint = cv2.triangulatePoints(projMatrixL, projMatrixR, leftCenter, rightCenter)
+            triangulatedPoint = cv2.triangulatePoints(self.projectionMatrixL, self.projectionMatrixR, leftPoint, rightPoint)
 
             # Add the triangulated point to the list
-            triangulatedPoints.append(triangulatedPoint)
+           # triangulatedPoints.append(triangulatedPoint)
+
+            triangulatedPoint = triangulatedPoint / triangulatedPoint[3]  # Convert to Cartesian coordinates
+
+# Calculate the distance
+            distance = np.sqrt(triangulatedPoint[0]**2 + triangulatedPoint[1]**2 + triangulatedPoint[2]**2)
+
+            triangulatedPoints.append(distance)
+
+        return triangulatedPoints
     
 if __name__ == '__main__':
 
