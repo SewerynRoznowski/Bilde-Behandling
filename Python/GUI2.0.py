@@ -39,7 +39,7 @@ class GUI():
         self.cameraWidthL = self.capL.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightL = self.capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        self.capR = cv2.VideoCapture(1)
+        self.capR = cv2.VideoCapture(2)
         if not self.capL.isOpened():
             print("Error: Right Camera not opened")
         else:
@@ -88,7 +88,7 @@ class GUI():
         self.calButton =tb.Button(self.centerFrame, text="Start Kalibrering", command=self.stereo_calibration, bootstyle="warning")
         self.calButton.grid(row=0, column=0, padx=2, pady=2)
 
-        self.snapButton = tb.Button(self.centerFrame, text= 'Snapshot', command = self.snapShot, bootstyle = 'info')
+        self.snapButton = tb.Button(self.centerFrame, text= 'Snapshot', command = self.snapShot, bootstyle = 'info', width='10')
         self.snapButton.grid(row=1, column=0, padx=2, pady=2)
 
         self.menuButton = tb.Menubutton(self.centerFrame,text='Original', bootstyle = "info")
@@ -248,11 +248,15 @@ class GUI():
         print("Lagrer Data!")
 
         self.kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_WRITE)
+        self.proj_MatxL = cv2.FileStorage('projMatrixL.xml', cv2.FILE_STORAGE_WRITE)
+        self.proj_MatxR = cv2.FileStorage('projMatrixR.xml', cv2.FILE_STORAGE_WRITE)
 
         self.kalib_data.write('stereoMapL_x', stereoMapL[0])
         self.kalib_data.write('stereoMapL_y', stereoMapL[1])
         self.kalib_data.write('stereoMapR_x', stereoMapR[0])
         self.kalib_data.write('stereoMapR_y', stereoMapR[1])
+        self.proj_MatxL.write('projMatrixL', projMatrixL)
+        self.proj_MatxR.write('projMatrixR', projMatrixR)
 
         self.kalib_data.release()
     
@@ -346,7 +350,7 @@ class GUI():
         else:
             print("Error: Failed to retrieve frames from cameras.")
 
-        self.window.after(100, self.update)
+        self.window.after(25, self.update)
 
 
 
@@ -418,11 +422,11 @@ class Colorconverter():
     def __init__(self) -> None:
         # self.frameL = frameL
         # self.frameR = frameR
-        self.hueMinL = 175
-        self.hueMaxL = 25
-        self.satMinL = 160
+        self.hueMinL = 120
+        self.hueMaxL = 11
+        self.satMinL = 120
         self.satMaxL = 255
-        self.valMinL = 150
+        self.valMinL = 79
         self.valMaxL = 255
         self.erodeL = None
         self.erodeR = None
@@ -575,7 +579,7 @@ class Colorconverter():
         try:
             # Draw contours on the image
             imageCopy = image.copy()
-            cv2.drawContours(imageCopy, contours, -1, (0,255,0), 3)
+            cv2.drawContours(imageCopy, contours, -1, (0,255,0), 2)
 
             return True, imageCopy
         
