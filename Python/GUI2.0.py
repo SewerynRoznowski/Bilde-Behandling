@@ -295,11 +295,11 @@ class GUI():
 
                 # draw the contour and center of the shape on the image
                 cv2.circle(frameL, (cX, cY), 7, (255, 255, 255), -1)
-                cv2.putText(frameL, "center: " + distanceToContours, (cX - 20, cY - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                cv2.putText(frameL, "center: " + str(distanceToContours[idx]), (cX - 20, cY - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 cv2.circle(frameR, (cX1, cY1), 7, (255, 255, 255), -1)
-                cv2.putText(frameR, "center: " + distanceToContours, (cX1 - 20, cY1 - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                cv2.putText(frameR, "center: " + str(distanceToContours[idx]), (cX1 - 20, cY1 - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 
             # --------------------------------------------------------------------------------
 
@@ -708,10 +708,15 @@ class Colorconverter():
 
         triangulatedPoints = []
 
+        if self.projectionMatrixL is None or self.projectionMatrixR is None:
+            for x in matches: 
+                triangulatedPoints.append(0)
+            return triangulatedPoints
+
         for x in matches:
             # Get the coordinates of the matched contours
-            leftContour = contoursL[x[0]]
-            rightContour = contoursR[x[1]]
+            leftContour = x[0]
+            rightContour = x[1]
 
             # Find the center of the contours
                 # find center of contours
