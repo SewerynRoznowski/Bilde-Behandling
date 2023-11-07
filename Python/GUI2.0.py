@@ -22,6 +22,24 @@ class GUI():
         self.stereoMapR_x = kalib_data.getNode('stereoMapR_x').mat()
         self.stereoMapR_y = kalib_data.getNode('stereoMapR_y').mat()
 
+        #Import The calibrated data for the projection matrix
+        try:
+        
+        
+            proj_matrix_data = cv2.FileStorage('projMatrixL.xml', cv2.FILE_STORAGE_READ)
+            self.projMatrixL = proj_matrix_data.getNode('projMatrixL').mat()
+            proj_matrix_data.release()
+
+            proj_matrix_data = cv2.FileStorage('projMatrixR.xml', cv2.FILE_STORAGE_READ)
+            self.projMatrixR = proj_matrix_data.getNode('projMatrixR').mat()
+            proj_matrix_data.release()
+
+            self.myColorconverter.projectionMatrixL = self.projMatrixL
+            self.myColorconverter.projectionMatrixR = self.projMatrixR
+
+        except:
+            print("Error: Could not import projection matrix")
+
         kalib_data.release()
         # print(self.stereoMapL_x.shape)
         # print(self.stereoMapL_y.shape)
