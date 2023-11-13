@@ -58,7 +58,7 @@ class GUI():
         self.cameraWidthL = self.capL.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightL = self.capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        self.capR = cv2.VideoCapture(1)
+        self.capR = cv2.VideoCapture(2)
         if not self.capL.isOpened():
             print("Error: Right Camera not opened")
         else:
@@ -176,7 +176,7 @@ class GUI():
 
     def stereo_calibration(self):
         chessboardSize = (8,5)
-        frameSize = (int(self.cameraWidthL), int(self.cameraHeightL))
+        frameSize = ('640x480')
 
         ## Kriterier ##
 
@@ -364,7 +364,7 @@ class GUI():
         else:
             print("Error: Failed to retrieve frames from cameras.")
 
-        self.window.after(100, self.update)
+        self.window.after(20, self.update)
 
 
 
@@ -461,8 +461,8 @@ class Colorconverter():
         self.cameraWidthR = None
         self.cameraHeightR = None
 
-        self.cameraLFOV = 78
-        self.cameraRFOV = 78
+        self.cameraLFOV = 75
+        self.cameraRFOV = 75
 
     def mask_from_HSV(self, HSVImage, hueMinL, hueMaxL, satMinL, satMaxL, valMinL, valMaxL):
         
@@ -814,7 +814,7 @@ class Colorconverter():
 
             _, distanceL, distanceR = self.calculate_triangle_sides(0.165, angleX0, angleX1)
 
-            triangulatedDistance.append([distanceM,distanceZ])
+            triangulatedDistance.append([distanceM,distanceR])
 
         return triangulatedDistance
     
