@@ -5,6 +5,7 @@ import cv2
 from PIL import Image, ImageTk
 import numpy as np
 import glob
+import math
 
 class GUI():
     def __init__(self) -> None:
@@ -57,7 +58,7 @@ class GUI():
         self.cameraWidthL = self.capL.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightL = self.capL.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        self.capR = cv2.VideoCapture(2)
+        self.capR = cv2.VideoCapture(1)
         if not self.capL.isOpened():
             print("Error: Right Camera not opened")
         else:
@@ -66,6 +67,14 @@ class GUI():
         self.capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cameraWidthR = self.capR.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.cameraHeightR = self.capR.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        self.myColorconverter.cameraWidthL = self.cameraWidthL
+        self.myColorconverter.cameraHeightL = self.cameraHeightL
+        self.myColorconverter.cameraWidthR = self.cameraWidthR
+        self.myColorconverter.cameraHeightR = self.cameraHeightR
+
+        self.processedImageL = None
+        self.processedImageR = None
 
 
         retL, frameL = self.capL.read()
@@ -167,7 +176,7 @@ class GUI():
 
     def stereo_calibration(self):
         chessboardSize = (8,5)
-        frameSize = (640, 480)
+        frameSize = (int(self.cameraWidthL), int(self.cameraHeightL))
 
         ## Kriterier ##
 
@@ -263,6 +272,9 @@ class GUI():
         self.myColorconverter.projectionMatrixL = projMatrixL
         self.myColorconverter.projectionMatrixR = projMatrixR
 
+        print(projMatrixL)
+        print(projMatrixR)
+
         print("Lagrer Data!")
 
         self.kalib_data = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_WRITE)
@@ -275,6 +287,9 @@ class GUI():
         self.kalib_data.write('stereoMapR_y', stereoMapR[1])
         self.proj_MatxL.write('projMatrixL', projMatrixL)
         self.proj_MatxR.write('projMatrixR', projMatrixR)
+
+        self.proj_MatxL.release()
+        self.proj_MatxR.release()
 
         self.kalib_data.release()
     
@@ -297,33 +312,11 @@ class GUI():
             # pass the filtered contours from the left and right frames to the contour matching function
             matchedContours = self.myColorconverter.contour_matching(processedImageL[7], processedImageR[7])
 
-            distanceToContours = self.myColorconverter.stereo_triangulation(matchedContours, processedImageL[7], processedImageR[7])
+            #distanceToContours = self.myColorconverter.stereo_triangulation(matchedContours)
 
+            distanceToContours = self.myColorconverter.stereo_simple_Triangulation(matchedContours)
 
-            # Draw contours on the original frames ----------------------------------------
-            # SKAL FLYTTES TIL EGEN FUNKSJON TIL MANDAG
-            for idx,x in enumerate(matchedContours):
-                cv2.drawContours(frameL, x[0], -1, (0,255,0), 3)
-                cv2.drawContours(frameR, x[1], -1, (0,255,0), 3)
-
-                # find center of contours
-                M = cv2.moments(x[0])
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
-
-                M = cv2.moments(x[1])
-                cX1 = int(M["m10"] / M["m00"])
-                cY1 = int(M["m01"] / M["m00"])
-
-                # draw the contour and center of the shape on the image
-                cv2.circle(frameL, (cX, cY), 7, (255, 255, 255), -1)
-                cv2.putText(frameL, "center: " + str(distanceToContours[idx]), (cX - 20, cY - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                cv2.circle(frameR, (cX1, cY1), 7, (255, 255, 255), -1)
-                cv2.putText(frameR, "center: " + str(distanceToContours[idx]), (cX1 - 20, cY1 - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                
-            # --------------------------------------------------------------------------------
+            self.myColorconverter.draw_triangulated_points(frameL, frameR, matchedContours, distanceToContours)
 
             # Convert frames to RGB format for display in top labels
             topLabelFrameL = cv2.cvtColor(frameL, cv2.COLOR_BGR2RGB)
@@ -345,6 +338,9 @@ class GUI():
                 selecedOutput = self.image_output.get()
                 selectedOutputIndex = self.options.index(selecedOutput)
                 
+                self.processedImageL = processedImageL
+                self.processedImageR = processedImageR
+
                 # Create PhotoImage objects for botImgL and botImgR labels
                 imageL = ImageTk.PhotoImage(Image.fromarray(processedImageL[selectedOutputIndex +1]))
                 imageR = ImageTk.PhotoImage(Image.fromarray(processedImageR[selectedOutputIndex +1]))
@@ -368,7 +364,7 @@ class GUI():
         else:
             print("Error: Failed to retrieve frames from cameras.")
 
-        self.window.after(25, self.update)
+        self.window.after(100, self.update)
 
 
 
@@ -379,6 +375,11 @@ class GUI():
             retR, frameR = self.capR.read()
             test = cv2.imwrite('Python/Calibration/images/LeftStereo/ImageL' + str(self.bildenr) + '.png', frameL)
             test1 = cv2.imwrite('Python/Calibration/images/RightStereo/ImageR' + str(self.bildenr) + '.png', frameR)
+            
+            for x in range(1,6):
+                test2 = cv2.imwrite('Python/Calibration/images/LeftProcessed/ImageL0' + str(x) + str(self.bildenr) + '.png', self.processedImageL[x])
+                test3 = cv2.imwrite('Python/Calibration/images/RightProcessed/ImageR0' + str(x) + str(self.bildenr) + '.png', self.processedImageR[x])
+
             if test == True and test1 == True:
                 print('Images saved!')
             self.bildenr += 1
@@ -454,6 +455,14 @@ class Colorconverter():
         # self.hsvR = cv2.cvtColor(frameR, cv2.COLOR_BGR2HSV)
         self.projectionMatrixL = None
         self.projectionMatrixR = None
+
+        self.cameraWidthL = None
+        self.cameraHeightL = None
+        self.cameraWidthR = None
+        self.cameraHeightR = None
+
+        self.cameraLFOV = 78
+        self.cameraRFOV = 78
 
     def mask_from_HSV(self, HSVImage, hueMinL, hueMaxL, satMinL, satMaxL, valMinL, valMaxL):
         
@@ -714,7 +723,7 @@ class Colorconverter():
         return bestMatches
     
 
-    def stereo_triangulation(self, matches, contoursL, contoursR):
+    def stereo_triangulation(self, matches):
         '''
         Triangulates the matched contours from two frames.
 
@@ -750,8 +759,8 @@ class Colorconverter():
             cX1 = int(M["m10"] / M["m00"])
             cY1 = int(M["m01"] / M["m00"])
 
-            leftPoint = [cX, cY, 1]
-            rightPoint = [cX1, cY1, 1]
+            leftPoint = np.array([float(cX), float(cY)])
+            rightPoint = np.array([float(cX1), float(cY1)])
 
             # Calculate the triangulated point
             triangulatedPoint = cv2.triangulatePoints(self.projectionMatrixL, self.projectionMatrixR, leftPoint, rightPoint)
@@ -764,10 +773,104 @@ class Colorconverter():
 # Calculate the distance
             distance = np.sqrt(triangulatedPoint[0]**2 + triangulatedPoint[1]**2 + triangulatedPoint[2]**2)
 
-            triangulatedPoints.append(distance)
+            triangulatedPoints.append([distance, distance])
 
         return triangulatedPoints
     
+    def stereo_simple_Triangulation(self, matches):
+        '''
+        Triangulates the matched contours from two frames.
+        Using simple triangulation method
+        '''
+
+        triangulatedDistance = []
+
+        for x in matches:
+            leftContour = x[0]
+            rightContour = x[1]
+
+            M = cv2.moments(leftContour)
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+
+            M = cv2.moments(rightContour)
+            cX1 = int(M["m10"] / M["m00"])
+            cY1 = int(M["m01"] / M["m00"])
+
+            x1 = cX - 320 
+            x2 = cX1 - 320
+            f = 2.11
+            b = 165  # baseline
+
+            distanceZ = (f*b)/(x1-x2)
+
+            distanceM = distanceZ*(2/8.7)
+
+            angleX0 = (math.degrees(math.atan((cX - self.cameraWidthL/2)/(self.cameraWidthL/2) * math.tan(math.radians(self.cameraLFOV/2))))*-1) + 90 
+            angleY0 = math.degrees(math.atan((cY - self.cameraHeightL/2)/(self.cameraHeightL/2) * math.tan(math.radians(self.cameraLFOV/2))))
+
+            angleX1 = math.degrees(math.atan((cX1 - self.cameraWidthR/2)/(self.cameraWidthR/2) * math.tan(math.radians(self.cameraRFOV/2)))) + 90
+            angleY1 = math.degrees(math.atan((cY1 - self.cameraHeightR/2)/(self.cameraHeightR/2) * math.tan(math.radians(self.cameraRFOV/2))))
+
+            _, distanceL, distanceR = self.calculate_triangle_sides(0.165, angleX0, angleX1)
+
+            triangulatedDistance.append([distanceM,distanceZ])
+
+        return triangulatedDistance
+    
+
+    def draw_triangulated_points(self, frameL, frameR, matchedContours, triangulatedPoints):
+            for idx,x in enumerate(matchedContours):
+                cv2.drawContours(frameL, x[0], -1, (0,255,0), 3)
+                cv2.drawContours(frameR, x[1], -1, (0,255,0), 3)
+
+                # find center of contours
+                M = cv2.moments(x[0])
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+
+                M = cv2.moments(x[1])
+                cX1 = int(M["m10"] / M["m00"])
+                cY1 = int(M["m01"] / M["m00"])
+
+                # draw the contour and center of the shape on the image
+                cv2.circle(frameL, (cX, cY), 7, (255, 255, 255), -1)
+                cv2.putText(frameL, "center: " + str(triangulatedPoints[idx][0]), (cX - 20, cY - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                cv2.circle(frameR, (cX1, cY1), 7, (255, 255, 255), -1)
+                cv2.putText(frameR, "center: " + str(triangulatedPoints[idx][1]), (cX1 - 20, cY1 - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                
+            # --------------------------------------------------------------------------------
+
+            
+
+    # Function to calculate the lengths of the other two sides
+    def calculate_triangle_sides(self, side_c, angle_a, angle_b):
+        # Convert angles from degrees to radians
+
+        angle_c = 180 - angle_a - angle_b
+
+        angle_a_rad = math.radians(angle_a)
+        angle_b_rad = math.radians(angle_b)
+        angle_c_rad = math.radians(angle_c)
+
+        success = True
+        side_a = 0
+        side_b = 0
+        
+        try: # Sometimes sin of andle_c_rad can give 0, this causes a division by zero error. 
+            side_b = (side_c * math.sin(angle_b_rad)) / math.sin(angle_c_rad)
+        
+            side_a = (side_c * math.sin(angle_a_rad)) / math.sin(angle_c_rad)
+        
+        except ZeroDivisionError:
+            success = False
+
+        return success, side_a, side_b
+
+
+
 if __name__ == '__main__':
 
     app = GUI()

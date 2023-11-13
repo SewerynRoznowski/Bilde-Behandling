@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<projMatrixR type_id="opencv-matrix">
+  <rows>3</rows>
+  <cols>4</cols>
+  <dt>d</dt>
+  <data>
+    1.2528822945551583e+03 0. -3.9955583190917969e+03
+    -1.3259596852308030e+06 0. 1.2528822945551583e+03
+    4.1014694595336914e+02 0. 0. 0. 1. 0.</data></projMatrixR>
+</opencv_storage>
